@@ -95,22 +95,30 @@ in `testdata/scenes/` used by every layer's tests.
 
 ## 4. Milestones
 
-### M0 — Foundations (½ day)
-- Repo scaffold, `go.mod`, `uv` workspace, Makefile (`make dev`, `make test`, `make build`)
-- `schemas/isodsl/v1` + Go & Python validators + golden fixtures
-- CI: go test, pytest, tsc, schema-validate-fixtures
+### M0 — Foundations — **DONE (Python side)**
+- [x] `schemas/isodsl/v1/isodsl.schema.json` — strict, `additionalProperties:false` throughout
+- [x] `schemas/isodsl/v1/RULES.md` — semantic rules ISO001–ISO022 with stable codes
+- [x] 5 valid + 8 invalid fixtures in `testdata/scenes/`, one per rule
+- [x] Python validator: schema layer + semantic layer, structured errors carrying remedy text for the LLM repair loop
+- [x] Canonical serializer (fixed precision, schema key order, stable hashing)
+- [ ] Go validator mirroring the same codes
+- [ ] Makefile + CI
 
-**Exit:** `make test` green on an empty system; fixtures validate identically in Go and Python.
+### M1 — Deterministic render engine — **core DONE**
+- [x] Isometric/dimetric projection, pinned coordinate tests
+- [x] All 5 primitives tessellated: cube, ramp (4 facings), cylinder, plane, group
+- [x] OKLab perceptual auto-shading (hue-preserving, unlike naive HSL)
+- [x] Hand-written SVG writer — byte-stable by construction, auto-fit framing, effects
+- [x] Golden-file tests, verified to catch a 0.0001 drift in a projection constant
+- [ ] PNG rasterization + icon bundles
+- [ ] FastAPI surface
 
-### M1 — Deterministic render engine (1–2 days) ← *build this before the LLM*
-Pure function `scene JSON → SVG bytes`. No service, no LLM. Just isometric projection math.
-- `iso_project(x,y,z) → (sx,sy)`, face polygon generation, depth sort, face shading
-- `svgwrite` output with **byte-stable** serialization (sorted attrs, fixed float precision, no timestamps/uuids)
-- Golden-file tests: `sha256(render(fixture))` pinned in CI — this is the product's core promise
-- PNG via `resvg-py` (preferred: no Cairo system dep) with `cairosvg` fallback; icon bundles (16→512, favicon.ico, .icns-ready) with padding/safe-zone
-- Wrap in FastAPI: `/render/svg`, `/render/png`, `/export/*`, `/import/isoforge-json`, `/diff/render`, `/exports/{id}[/download]`
+**Status:** 105 tests passing. `render(scene)` is byte-identical across repeats, immune
+to shape-array order and JSON key order.
 
-**Exit:** `curl` a fixture → identical SVG bytes on macOS and Linux; icon bundle zip produced.
+### M1 remainder — raster + service surface
+- PNG via `resvg-py` (no Cairo system dep); icon bundles (16→512, favicon.ico, .icns-ready)
+- FastAPI: `/render/svg`, `/render/png`, `/export/*`, `/import/isoforge-json`, `/diff/render`, `/exports/{id}[/download]`
 
 ### M2 — scene_store (1 day)
 - SQLite schema + migrations for all 9 tables (spec uses `UUID`/`TIMESTAMPTZ`/`JSONB`; map to `TEXT`/`TEXT ISO-8601`/`TEXT` + `json_valid()` CHECK, UUIDv4 generated in Go)
