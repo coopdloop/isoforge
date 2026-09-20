@@ -1,0 +1,11 @@
+{
+  "_expect_error": "ISO011",
+  "_note": "Origin is in bounds but size pushes the extent past grid.w.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "wide", "type": "cube", "at": { "x": 2, "y": 0, "z": 0 }, "size": { "x": 8, "y": 1, "z": 1 }, "fill": "@palette.base" }
+  ]
+}

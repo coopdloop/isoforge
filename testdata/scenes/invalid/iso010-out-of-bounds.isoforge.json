@@ -1,0 +1,13 @@
+{
+  "_expect_error": "ISO010",
+  "_note": "Group offset (3,3,0) plus child offset (3,3,0) lands at (6,6,0), outside a 4x4x4 grid.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "holder", "type": "group", "at": { "x": 3, "y": 3, "z": 0 }, "children": [
+      { "id": "stray", "type": "cube", "at": { "x": 3, "y": 3, "z": 0 }, "fill": "@palette.base" }
+    ]}
+  ]
+}

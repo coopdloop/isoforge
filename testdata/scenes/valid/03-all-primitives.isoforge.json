@@ -1,0 +1,97 @@
+{
+  "isodsl_version": "1.0.0",
+  "meta": {
+    "name": "All Primitives",
+    "description": "Exercises every shape type plus every effect. Coverage fixture for the renderers.",
+    "tags": ["coverage", "primitives", "effects"]
+  },
+  "canvas": { "width": 640, "height": 640, "background": "#10131A", "padding": 0.12 },
+  "grid": { "w": 8, "d": 8, "h": 6, "cell": 28 },
+  "camera": { "projection": "isometric", "fit": true },
+  "palette": {
+    "id": "spectrum",
+    "name": "Spectrum",
+    "colors": {
+      "slab": "#3B82F6",
+      "wedge": "#EF4444",
+      "tube": "#10B981",
+      "floor": "#1E293B",
+      "pip": "#FBBF24"
+    }
+  },
+  "shading": { "enabled": true, "top": 0.14, "left": -0.12, "right": -0.26 },
+  "effects": {
+    "outline": { "enabled": true, "color": "#05070B", "width": 1.5, "scope": "silhouette" },
+    "shadow": {
+      "enabled": true,
+      "color": "#000000",
+      "opacity": 0.35,
+      "blur": 6,
+      "offset": { "x": 0, "y": 5 }
+    },
+    "glow": { "enabled": true, "color": "@palette.pip", "radius": 10, "intensity": 0.5 }
+  },
+  "shapes": [
+    {
+      "id": "ground",
+      "type": "plane",
+      "at": { "x": 0, "y": 0, "z": 0 },
+      "size": { "x": 6, "y": 6 },
+      "orientation": "top",
+      "fill": "@palette.floor",
+      "opacity": 0.55
+    },
+    {
+      "id": "base_slab",
+      "type": "cube",
+      "at": { "x": 1, "y": 1, "z": 0 },
+      "size": { "x": 3, "y": 3, "z": 0.5 },
+      "fill": "@palette.slab",
+      "bevel": 0.1
+    },
+    {
+      "id": "roof",
+      "type": "ramp",
+      "at": { "x": 1, "y": 1, "z": 1 },
+      "size": { "x": 2, "y": 2, "z": 1 },
+      "facing": "east",
+      "fill": "@palette.wedge"
+    },
+    {
+      "id": "column",
+      "type": "cylinder",
+      "at": { "x": 4, "y": 1, "z": 1 },
+      "size": { "x": 1, "y": 1, "z": 2 },
+      "segments": 48,
+      "fill": "@palette.tube"
+    },
+    {
+      "id": "cluster",
+      "type": "group",
+      "at": { "x": 1, "y": 4, "z": 1 },
+      "children": [
+        {
+          "id": "pip_a",
+          "type": "cube",
+          "at": { "x": 0, "y": 0, "z": 0 },
+          "size": { "x": 0.5, "y": 0.5, "z": 0.5 },
+          "fill": "@palette.pip"
+        },
+        {
+          "id": "pip_b",
+          "type": "cube",
+          "at": { "x": 1, "y": 0, "z": 0 },
+          "size": { "x": 0.5, "y": 0.5, "z": 0.5 },
+          "fill": "@palette.pip"
+        },
+        {
+          "id": "pip_c",
+          "type": "cube",
+          "at": { "x": 0, "y": 1, "z": 0 },
+          "size": { "x": 0.5, "y": 0.5, "z": 0.5 },
+          "fill": "@palette.pip"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "isodsl_version": "1.0.0",
+  "meta": { "name": "Explicit Face Stack", "tags": ["faces", "stack"] },
+  "canvas": { "width": 512, "height": 512, "background": "#0B0E14", "padding": 0.1 },
+  "grid": { "w": 3, "d": 3, "h": 4, "cell": 32 },
+  "camera": { "projection": "isometric", "fit": true },
+  "palette": {
+    "id": "ember",
+    "colors": { "hot": "#FF6B35", "warm": "#F7B801", "cool": "#2EC4B6" }
+  },
+  "shading": { "enabled": false },
+  "shapes": [
+    {
+      "id": "bottom",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 0 },
+      "size": { "x": 2, "y": 2, "z": 1 },
+      "faces": {
+        "top": { "fill": "@palette.hot" },
+        "left": { "fill": "#C4431F" },
+        "right": { "fill": "#9E3418" }
+      }
+    },
+    {
+      "id": "middle",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 1 },
+      "size": { "x": 1.5, "y": 1.5, "z": 1 },
+      "faces": {
+        "top": { "fill": "@palette.warm" },
+        "left": { "fill": "#C08F01" },
+        "right": { "fill": "#8F6B01" }
+      }
+    },
+    {
+      "id": "cap",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 2 },
+      "size": { "x": 1, "y": 1, "z": 0.5 },
+      "fill": "@palette.cool",
+      "faces": { "top": { "fill": "@palette.cool", "opacity": 0.9 } }
+    }
+  ]
+}

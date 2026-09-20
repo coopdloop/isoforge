@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512.0" height="512.0" viewBox="0 0 512.0 512.0">
+  <title>Locked Palette</title>
+  <desc>Theme-lock enabled. Every color in the document is a palette reference, so ISO003 holds.</desc>
+  <g transform="translate(256.0,279.8933) scale(2.9867)">
+    <polygon points="0.0,-16.0 55.4256,16.0 0.0,48.0 -55.4256,16.0" fill="#2E3440" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="-55.4256,16.0 0.0,48.0 0.0,64.0 -55.4256,32.0" fill="#2E3440" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="55.4256,16.0 0.0,48.0 0.0,64.0 55.4256,32.0" fill="#2E3440" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="0.0,-80.0 27.7128,-64.0 0.0,-48.0 -27.7128,-64.0" fill="#88C0D0" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="-27.7128,-64.0 0.0,-48.0 0.0,0.0 -27.7128,-16.0" fill="#88C0D0" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="27.7128,-64.0 0.0,-48.0 0.0,0.0 27.7128,-16.0" fill="#88C0D0" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="0.0,-16.0 13.8564,-8.0 0.0,0.0 -13.8564,-8.0" fill="#A3BE8C" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="-13.8564,-8.0 0.0,0.0 0.0,16.0 -13.8564,8.0" fill="#A3BE8C" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+    <polygon points="13.8564,-8.0 0.0,0.0 0.0,16.0 13.8564,8.0" fill="#A3BE8C" stroke="#0B0E14" stroke-width="0.3348" stroke-linejoin="round"/>
+  </g>
+</svg>

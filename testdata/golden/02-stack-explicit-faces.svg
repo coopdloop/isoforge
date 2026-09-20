@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512.0" height="512.0" viewBox="0 0 512.0 512.0">
+  <title>Explicit Face Stack</title>
+  <rect x="0" y="0" width="512.0" height="512.0" fill="#0B0E14"/>
+  <g transform="translate(256.0,278.7556) scale(2.8444)">
+    <polygon points="0.0,-32.0 55.4256,0.0 0.0,32.0 -55.4256,0.0" fill="#FF6B35"/>
+    <polygon points="-55.4256,0.0 0.0,32.0 0.0,64.0 -55.4256,32.0" fill="#C4431F"/>
+    <polygon points="55.4256,0.0 0.0,32.0 0.0,64.0 55.4256,32.0" fill="#9E3418"/>
+    <polygon points="0.0,-64.0 41.5692,-40.0 0.0,-16.0 -41.5692,-40.0" fill="#F7B801"/>
+    <polygon points="-41.5692,-40.0 0.0,-16.0 0.0,16.0 -41.5692,-8.0" fill="#C08F01"/>
+    <polygon points="41.5692,-40.0 0.0,-16.0 0.0,16.0 41.5692,-8.0" fill="#8F6B01"/>
+    <polygon points="0.0,-80.0 27.7128,-64.0 0.0,-48.0 -27.7128,-64.0" fill="#2EC4B6" fill-opacity="0.9"/>
+    <polygon points="-27.7128,-64.0 0.0,-48.0 0.0,-32.0 -27.7128,-48.0" fill="#2EC4B6"/>
+    <polygon points="27.7128,-64.0 0.0,-48.0 0.0,-32.0 27.7128,-48.0" fill="#2EC4B6"/>
+  </g>
+</svg>

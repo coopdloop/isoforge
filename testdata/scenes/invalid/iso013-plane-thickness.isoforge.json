@@ -1,0 +1,11 @@
+{
+  "_expect_error": "ISO013",
+  "_note": "A 'top' plane must have zero extent on z, but declares z=1.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "floor", "type": "plane", "at": { "x": 0, "y": 0, "z": 0 }, "orientation": "top", "size": { "x": 2, "y": 2, "z": 1 }, "fill": "@palette.base" }
+  ]
+}

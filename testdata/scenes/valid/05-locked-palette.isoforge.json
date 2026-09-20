@@ -1,0 +1,49 @@
+{
+  "isodsl_version": "1.0.0",
+  "meta": {
+    "name": "Locked Palette",
+    "description": "Theme-lock enabled. Every color in the document is a palette reference, so ISO003 holds.",
+    "tags": ["theme", "lock"]
+  },
+  "canvas": { "width": 512, "height": 512, "background": null, "padding": 0.08 },
+  "grid": { "w": 4, "d": 4, "h": 4, "cell": 32 },
+  "camera": { "projection": "isometric", "fit": true },
+  "palette": {
+    "id": "nord-lock",
+    "name": "Nord Lock",
+    "locked": true,
+    "colors": {
+      "polar": "#2E3440",
+      "frost": "#88C0D0",
+      "aurora": "#A3BE8C",
+      "ink": "#0B0E14"
+    }
+  },
+  "shading": { "enabled": true },
+  "effects": {
+    "outline": { "enabled": true, "color": "@palette.ink", "width": 1, "scope": "face" }
+  },
+  "shapes": [
+    {
+      "id": "plinth",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 0 },
+      "size": { "x": 2, "y": 2, "z": 0.5 },
+      "fill": "@palette.polar"
+    },
+    {
+      "id": "crystal",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 1 },
+      "size": { "x": 1, "y": 1, "z": 1.5 },
+      "fill": "@palette.frost"
+    },
+    {
+      "id": "spark",
+      "type": "cube",
+      "at": { "x": 1, "y": 1, "z": 1 },
+      "size": { "x": 0.5, "y": 0.5, "z": 0.5 },
+      "fill": "@palette.aurora"
+    }
+  ]
+}

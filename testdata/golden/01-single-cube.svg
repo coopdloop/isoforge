@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512.0" height="512.0" viewBox="0 0 512.0 512.0">
+  <title>Single Cube</title>
+  <desc>Minimal valid scene: one cube, auto-shaded from a palette reference.</desc>
+  <g transform="translate(256.0,256.0) scale(6.72)">
+    <polygon points="0.0,-32.0 27.7128,-16.0 0.0,0.0 -27.7128,-16.0" fill="#9E84FF"/>
+    <polygon points="-27.7128,-16.0 0.0,0.0 0.0,32.0 -27.7128,16.0" fill="#5828CE"/>
+    <polygon points="27.7128,-16.0 0.0,0.0 0.0,32.0 27.7128,16.0" fill="#39009E"/>
+  </g>
+</svg>

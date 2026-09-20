@@ -1,0 +1,14 @@
+{
+  "_expect_error": "ISO001",
+  "_note": "Two shapes share the id 'dup', one nested inside a group.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "dup", "type": "cube", "at": { "x": 0, "y": 0, "z": 0 }, "fill": "@palette.base" },
+    { "id": "holder", "type": "group", "at": { "x": 1, "y": 1, "z": 0 }, "children": [
+      { "id": "dup", "type": "cube", "at": { "x": 0, "y": 0, "z": 0 }, "fill": "@palette.base" }
+    ]}
+  ]
+}

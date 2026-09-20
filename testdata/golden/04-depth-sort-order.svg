@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512.0" height="512.0" viewBox="0 0 512.0 512.0">
+  <title>Depth Sort Order</title>
+  <desc>Shapes are deliberately listed in an order that contradicts their paint order. Correct output must be sorted by (x+y+z) then id, proving array order is never consulted. Expected paint order: origin, mid_a, mid_b, far, apex.</desc>
+  <g transform="translate(225.2799,202.7914) scale(2.217)">
+    <polygon points="0.0,-32.0 27.7128,-16.0 0.0,0.0 -27.7128,-16.0" fill="#E2E8F0"/>
+    <polygon points="-27.7128,-16.0 0.0,0.0 0.0,32.0 -27.7128,16.0" fill="#E2E8F0"/>
+    <polygon points="27.7128,-16.0 0.0,0.0 0.0,32.0 27.7128,16.0" fill="#E2E8F0"/>
+    <polygon points="55.4256,0.0 83.1384,16.0 55.4256,32.0 27.7128,16.0" fill="#94A3B8"/>
+    <polygon points="27.7128,16.0 55.4256,32.0 55.4256,64.0 27.7128,48.0" fill="#94A3B8"/>
+    <polygon points="83.1384,16.0 55.4256,32.0 55.4256,64.0 83.1384,48.0" fill="#94A3B8"/>
+    <polygon points="-55.4256,0.0 -27.7128,16.0 -55.4256,32.0 -83.1384,16.0" fill="#475569"/>
+    <polygon points="-83.1384,16.0 -55.4256,32.0 -55.4256,64.0 -83.1384,48.0" fill="#475569"/>
+    <polygon points="-27.7128,16.0 -55.4256,32.0 -55.4256,64.0 -27.7128,48.0" fill="#475569"/>
+    <polygon points="83.1384,16.0 110.8513,32.0 83.1384,48.0 55.4256,32.0" fill="#1E293B"/>
+    <polygon points="55.4256,32.0 83.1384,48.0 83.1384,80.0 55.4256,64.0" fill="#1E293B"/>
+    <polygon points="110.8513,32.0 83.1384,48.0 83.1384,80.0 110.8513,64.0" fill="#1E293B"/>
+    <polygon points="0.0,-32.0 27.7128,-16.0 0.0,0.0 -27.7128,-16.0" fill="#F43F5E"/>
+    <polygon points="-27.7128,-16.0 0.0,0.0 0.0,32.0 -27.7128,16.0" fill="#F43F5E"/>
+    <polygon points="27.7128,-16.0 0.0,0.0 0.0,32.0 27.7128,16.0" fill="#F43F5E"/>
+  </g>
+</svg>

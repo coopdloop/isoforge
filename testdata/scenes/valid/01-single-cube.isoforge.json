@@ -1,0 +1,27 @@
+{
+  "isodsl_version": "1.0.0",
+  "meta": {
+    "name": "Single Cube",
+    "description": "Minimal valid scene: one cube, auto-shaded from a palette reference.",
+    "tags": ["minimal", "smoke"]
+  },
+  "canvas": { "width": 512, "height": 512, "background": null, "padding": 0.08 },
+  "grid": { "w": 4, "d": 4, "h": 4, "cell": 32 },
+  "camera": { "projection": "isometric", "fit": true },
+  "palette": {
+    "id": "violet-dev",
+    "name": "Violet Dev",
+    "locked": false,
+    "colors": { "base": "#7C5CFF", "accent": "#22D3EE" }
+  },
+  "shading": { "enabled": true, "top": 0.12, "left": -0.14, "right": -0.28 },
+  "shapes": [
+    {
+      "id": "core",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 0 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.base"
+    }
+  ]
+}

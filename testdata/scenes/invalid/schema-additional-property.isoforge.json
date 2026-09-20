@@ -1,0 +1,11 @@
+{
+  "_expect_error": "SCHEMA",
+  "_note": "'rotation' is not part of IsoDSL v1. additionalProperties:false must reject it - this is the guard that makes LLM output trustworthy.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "core", "type": "cube", "at": { "x": 0, "y": 0, "z": 0 }, "fill": "@palette.base", "rotation": 45 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_expect_error": "ISO002",
+  "_note": "References @palette.missing which is not defined in palette.colors.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "core", "type": "cube", "at": { "x": 0, "y": 0, "z": 0 }, "fill": "@palette.missing" }
+  ]
+}

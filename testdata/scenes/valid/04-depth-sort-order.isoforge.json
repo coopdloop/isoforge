@@ -1,0 +1,52 @@
+{
+  "isodsl_version": "1.0.0",
+  "meta": {
+    "name": "Depth Sort Order",
+    "description": "Shapes are deliberately listed in an order that contradicts their paint order. Correct output must be sorted by (x+y+z) then id, proving array order is never consulted. Expected paint order: origin, mid_a, mid_b, far, apex.",
+    "tags": ["determinism", "ordering"]
+  },
+  "canvas": { "width": 512, "height": 512, "background": null, "padding": 0.08 },
+  "grid": { "w": 6, "d": 6, "h": 6, "cell": 32 },
+  "camera": { "projection": "isometric", "fit": true },
+  "palette": {
+    "id": "mono",
+    "colors": { "a": "#E2E8F0", "b": "#94A3B8", "c": "#475569", "d": "#1E293B", "e": "#F43F5E" }
+  },
+  "shapes": [
+    {
+      "id": "apex",
+      "type": "cube",
+      "at": { "x": 2, "y": 2, "z": 2 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.e"
+    },
+    {
+      "id": "mid_b",
+      "type": "cube",
+      "at": { "x": 0, "y": 2, "z": 0 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.c"
+    },
+    {
+      "id": "far",
+      "type": "cube",
+      "at": { "x": 3, "y": 0, "z": 0 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.d"
+    },
+    {
+      "id": "origin",
+      "type": "cube",
+      "at": { "x": 0, "y": 0, "z": 0 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.a"
+    },
+    {
+      "id": "mid_a",
+      "type": "cube",
+      "at": { "x": 2, "y": 0, "z": 0 },
+      "size": { "x": 1, "y": 1, "z": 1 },
+      "fill": "@palette.b"
+    }
+  ]
+}

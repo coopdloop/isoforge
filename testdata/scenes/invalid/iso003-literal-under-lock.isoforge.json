@@ -1,0 +1,11 @@
+{
+  "_expect_error": "ISO003",
+  "_note": "palette.locked is true but 'core' uses a literal hex color.",
+  "isodsl_version": "1.0.0",
+  "canvas": { "width": 512, "height": 512 },
+  "grid": { "w": 4, "d": 4, "h": 4 },
+  "palette": { "locked": true, "colors": { "base": "#7C5CFF" } },
+  "shapes": [
+    { "id": "core", "type": "cube", "at": { "x": 0, "y": 0, "z": 0 }, "fill": "#FF0000" }
+  ]
+}
