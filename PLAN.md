@@ -116,9 +116,13 @@ in `testdata/scenes/` used by every layer's tests.
 **Status:** 105 tests passing. `render(scene)` is byte-identical across repeats, immune
 to shape-array order and JSON key order.
 
-### M1 remainder — raster + service surface
-- PNG via `resvg-py` (no Cairo system dep); icon bundles (16→512, favicon.ico, .icns-ready)
-- FastAPI: `/render/svg`, `/render/png`, `/export/*`, `/import/isoforge-json`, `/diff/render`, `/exports/{id}[/download]`
+### M1 remainder — **DONE**
+- [x] PNG via `resvg-py` (no Cairo system dep), normalised through Pillow for byte-stability
+- [x] Icon bundles: PNG ladder 16→1024, `favicon.ico`, Apple `icon.iconset/` layout
+      (verified: `iconutil -c icns` produces a real `.icns`), deterministic zips
+- [x] FastAPI: `/render/svg`, `/render/png`, `/export/*`, `/import/isoforge-json`,
+      `/diff/render`, `/exports/{id}[/download]`, `/validate-scene`, `/schema/isodsl`
+- [x] Export store with restart-survivable index and path-traversal defense
 
 ### M2 — scene_store (1 day)
 - SQLite schema + migrations for all 9 tables (spec uses `UUID`/`TIMESTAMPTZ`/`JSONB`; map to `TEXT`/`TEXT ISO-8601`/`TEXT` + `json_valid()` CHECK, UUIDv4 generated in Go)
@@ -131,15 +135,23 @@ to shape-array order and JSON key order.
 
 **Exit:** create project → 5 versions → history/diff/revert round-trips; kill & restart, state intact.
 
-### M3 — agent_orchestrator (2 days)
-- Provider interface with three adapters: OpenAI, Anthropic, Ollama (Ollama uses constrained JSON output as the function-calling shim)
-- Two tools exposed to the LLM: `set_scene(scene)` and `patch_scene(ops[])` (RFC-6902)
-- **Validate → repair loop:** invalid payload → feed schema errors back, retry (max 2), then fail loudly. Never persist unvalidated output.
-- Theme lock: when locked, reject/clamp any color outside the active palette before validation
-- Conversation + messages persistence, `/reload` for round-trip editing from a `.isoforge.json`
-- Good system prompt + few-shot fixtures; `/tools` introspection endpoint
+### M3 — agent_orchestrator — **DONE**
+- [x] Three adapters: **OpenRouter** (default), **Anthropic**, **Ollama**
+- [x] Ollama shim: native tool calling with automatic fallback to JSON-schema-constrained
+      decoding, so local models honour ADR-001 identically to hosted ones
+- [x] Tools: `set_scene`, `patch_scene` (RFC-6902), `save_theme`; `patch_scene` is
+      withheld until a scene exists, removing a whole class of failure
+- [x] Validate→repair loop, bounded at 2 retries, feeding back structured ISO0xx codes
+      plus remedy text. A failed turn leaves the previous design untouched.
+- [x] Theme lock with deterministic literal→palette clamping before validation
+- [x] System prompt encoding the design rules (silhouette-first, three tones, grid alignment)
+- [x] `/tools`, `/providers`, `/conversations/*`, `/reload`, `/theme-lock`
 
-**Exit:** `"a purple cube with a glowing top"` → valid scene; `"make it teal"` → minimal patch, not a full rewrite.
+**Verified against a live model (OpenRouter + Claude Sonnet 4.5):** "a forge anvil made
+of cubes, hot orange and dark steel" produced a valid 6-shape scene with 0 repairs;
+the follow-up "make it glow more, add a drop shadow" correctly emitted a **1-op patch**
+rather than a rewrite. Caught and fixed a real renderer bug this way: the glow filter
+was defined but never referenced, so glow silently did nothing.
 
 ### M4 — iso_gateway (1 day)
 - gin server on 4747; reverse-proxy/coordinate the three backends
@@ -225,8 +237,19 @@ Rough total: ~10–12 focused days solo.
 
 ---
 
-## 7. Immediate next actions
+## 7. Current status
 
-1. Ratify the IsoDSL schema sketch in §3 (shape primitives + effects list is the main open question)
-2. Answer the three scope questions in §6
-3. Then: M0 scaffold + schema + fixtures, immediately followed by M1's golden-file render tests
+**Done:** M0 (schema + validators + fixtures), M1 (render engine + raster + export API),
+M3 (agent orchestrator + 3 providers). 198 tests passing.
+
+**Next, in order:**
+1. **M2 — `scene_store` (Go).** SQLite migrations for the 9 tables, immutable version
+   history, revert-as-new-version, RFC-6902 diffs, theme CRUD, builtin theme seeding.
+   Plus the Go IsoDSL validator mirroring the ISO0xx codes, pinned to the shared fixtures.
+2. **M4 — `iso_gateway` (Go).** Same binary as the store; gin + WS hub, `go:embed` web bundle.
+3. **M5 — CLI.** First fully shippable increment.
+4. **M6 — web workbench**, **M7 — packaging**.
+
+**Open question for you:** the Go half (M2+M4) is the next big chunk. Worth confirming
+the two-binary split still feels right before I build it, since M5's CLI supervisor
+depends on that shape.
