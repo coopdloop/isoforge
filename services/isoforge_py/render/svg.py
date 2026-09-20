@@ -60,30 +60,40 @@ def _defs(scene: dict, palette: dict) -> tuple[list[str], dict[str, str]]:
     refs: dict[str, str] = {}
 
     shadow = effects.get("shadow") or {}
-    if shadow.get("enabled"):
+    glow = effects.get("glow") or {}
+    shadow_on = bool(shadow.get("enabled"))
+    glow_on = bool(glow.get("enabled"))
+
+    def _shadow_primitive() -> str:
         color = resolve_color(shadow.get("color", "#000000"), palette)
         offset = shadow.get("offset") or {}
-        parts.append(
-            '<filter id="iso-shadow" x="-50%" y="-50%" width="200%" height="200%">'
+        return (
             f'<feDropShadow dx="{fmt(offset.get("x", 0))}" dy="{fmt(offset.get("y", 4))}"'
             f' stdDeviation="{fmt(float(shadow.get("blur", 4)) / 2.0)}"'
             f' flood-color="{color}" flood-opacity="{fmt(shadow.get("opacity", 0.25))}"/>'
-            "</filter>"
         )
-        refs["shadow"] = "iso-shadow"
 
-    glow = effects.get("glow") or {}
-    if glow.get("enabled"):
+    def _glow_primitive() -> str:
         color = resolve_color(glow.get("color", "#FFFFFF"), palette)
-        radius = float(glow.get("radius", 8))
-        intensity = float(glow.get("intensity", 0.6))
-        parts.append(
-            '<filter id="iso-glow" x="-50%" y="-50%" width="200%" height="200%">'
-            f'<feDropShadow dx="0" dy="0" stdDeviation="{fmt(radius / 2.0)}"'
-            f' flood-color="{color}" flood-opacity="{fmt(intensity)}"/>'
-            "</filter>"
+        return (
+            f'<feDropShadow dx="0" dy="0"'
+            f' stdDeviation="{fmt(float(glow.get("radius", 8)) / 2.0)}"'
+            f' flood-color="{color}" flood-opacity="{fmt(glow.get("intensity", 0.6))}"/>'
         )
-        refs["glow"] = "iso-glow"
+
+    # Glow and shadow are chained into one filter because SVG allows only a single
+    # filter attribute per element; defining two separately would silently drop one.
+    if shadow_on or glow_on:
+        primitives = ""
+        if glow_on:
+            primitives += _glow_primitive()
+        if shadow_on:
+            primitives += _shadow_primitive()
+        parts.append(
+            '<filter id="iso-effects" x="-75%" y="-75%" width="250%" height="250%">'
+            f"{primitives}</filter>"
+        )
+        refs["effects"] = "iso-effects"
 
     return parts, refs
 
@@ -128,7 +138,7 @@ def render_svg(scene: dict, *, pretty: bool = True) -> str:
         )
 
     group_attrs = f'transform="translate({fmt(tx)},{fmt(ty)}) scale({fmt(scale)})"'
-    if fid := filter_refs.get("shadow"):
+    if fid := filter_refs.get("effects"):
         group_attrs += f' filter="url(#{fid})"'
     out.append(f"{ind}<g {group_attrs}>")
 

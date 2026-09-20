@@ -15,7 +15,7 @@ from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
 from ..isodsl import SCHEMA, SCHEMA_PATH, SCHEMA_VERSION, validate
-from . import render_routes
+from . import agent_routes, render_routes
 
 app = FastAPI(
     title="IsoForge Python services",
@@ -24,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(render_routes.router)
+app.include_router(agent_routes.router)
 
 
 @app.get("/health", tags=["health"])

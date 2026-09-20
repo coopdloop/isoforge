@@ -126,9 +126,39 @@ class TestFraming:
 
 
 class TestEffects:
-    def test_shadow_and_glow_define_filters(self, load_scene):
+    def test_shadow_and_glow_are_both_applied(self, load_scene):
+        """Regression: both effects must reach the output, not just the last one.
+
+        SVG allows one filter attribute per element, so chaining them into a single
+        filter is the only way both can take effect.
+        """
         svg = render_svg(load_scene("03-all-primitives"))
-        assert 'id="iso-shadow"' in svg and 'id="iso-glow"' in svg
+        assert 'id="iso-effects"' in svg
+        assert svg.count("<feDropShadow") == 2
+        assert 'filter="url(#iso-effects)"' in svg
+
+    def test_shadow_alone_is_applied(self, single_cube):
+        import json as _json
+
+        scene = _json.loads(_json.dumps(single_cube))
+        scene["effects"] = {"shadow": {"enabled": True}}
+        svg = render_svg(scene)
+        assert 'filter="url(#iso-effects)"' in svg and svg.count("<feDropShadow") == 1
+
+    def test_glow_alone_is_applied(self, single_cube):
+        import json as _json
+
+        scene = _json.loads(_json.dumps(single_cube))
+        scene["effects"] = {"glow": {"enabled": True, "color": "#FFAA00"}}
+        svg = render_svg(scene)
+        assert 'filter="url(#iso-effects)"' in svg and "#FFAA00" in svg
+
+    def test_disabled_effects_emit_no_filter(self, single_cube):
+        import json as _json
+
+        scene = _json.loads(_json.dumps(single_cube))
+        scene["effects"] = {"shadow": {"enabled": False}, "glow": {"enabled": False}}
+        assert "filter=" not in render_svg(scene)
 
     def test_filter_ids_are_fixed_not_random(self, load_scene):
         """Random ids would break byte-stability."""
