@@ -349,6 +349,44 @@ func (s *Server) handleValidate(c *gin.Context) {
 
 // --- static -----------------------------------------------------------------
 
+// spaFallback serves the React shell for browser navigations.
+//
+// Some paths are both API endpoints and client-side routes: GET /sessions/:id returns
+// JSON to the CLI but must render the workbench when typed into a browser. Content
+// negotiation resolves the collision, since navigations send `Accept: text/html`
+// while fetch/XHR send */* or application/json.
+func (s *Server) spaFallback() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if s.webFS == nil || c.Request.Method != http.MethodGet {
+			c.Next()
+			return
+		}
+		accept := c.GetHeader("Accept")
+		if !strings.Contains(accept, "text/html") {
+			c.Next()
+			return
+		}
+		// Asset requests carry text/html in Accept only by accident; let them through
+		// so a missing file still 404s rather than silently returning the shell.
+		path := strings.TrimPrefix(c.Request.URL.Path, "/")
+		if path == "" || hasFileExtension(path) {
+			c.Next()
+			return
+		}
+		s.serveIndex(c)
+		c.Abort()
+	}
+}
+
+func (s *Server) serveIndex(c *gin.Context) {
+	data, err := fs.ReadFile(s.webFS, "index.html")
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "web UI not available"})
+		return
+	}
+	c.Data(http.StatusOK, "text/html; charset=utf-8", data)
+}
+
 // mountStatic serves the embedded React bundle with SPA fallback.
 func (s *Server) mountStatic(r *gin.Engine) {
 	if s.webFS == nil {

@@ -556,3 +556,109 @@ func TestHubCloseSessionDisconnectsClients(t *testing.T) {
 		t.Error("clients should be removed")
 	}
 }
+
+// setupWithWeb builds a server with a fake embedded bundle.
+func setupWithWeb(t *testing.T) http.Handler {
+	t.Helper()
+	dir := t.TempDir()
+	db, err := store.Open(store.Options{
+		DBPath: filepath.Join(dir, "t.db"), ScenesDir: filepath.Join(dir, "s"),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+
+	webRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(webRoot, "index.html"),
+		[]byte("<!doctype html><title>IsoForge</title>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(webRoot, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(webRoot, "assets", "app.js"),
+		[]byte("console.log(1)"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	fake := &fakeBackend{}
+	backendSrv := fake.server(t)
+	srv := NewServer(Config{
+		Store:   db,
+		Backend: NewBackend(backendSrv.URL, backendSrv.URL),
+		WebFS:   os.DirFS(webRoot),
+	})
+	return srv.Handler()
+}
+
+func getWithAccept(t *testing.T, h http.Handler, path, accept string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Accept", accept)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// TestSpaFallbackVsApiCollision covers the case where a path is both an API route and
+// a client-side route: GET /sessions/:id must return JSON to the CLI but render the
+// workbench when typed into a browser.
+func TestSpaFallbackVsApiCollision(t *testing.T) {
+	h := setupWithWeb(t)
+
+	browser := getWithAccept(t, h, "/sessions/unknown-id", "text/html,application/xhtml+xml")
+	if browser.Code != http.StatusOK {
+		t.Errorf("browser navigation should render the SPA, got %d", browser.Code)
+	}
+	if ct := browser.Header().Get("Content-Type"); !strings.Contains(ct, "text/html") {
+		t.Errorf("expected html, got %q", ct)
+	}
+
+	apiCall := getWithAccept(t, h, "/sessions/unknown-id", "application/json")
+	if apiCall.Code != http.StatusNotFound {
+		t.Errorf("API call should 404, got %d", apiCall.Code)
+	}
+}
+
+func TestSpaServesClientRoutes(t *testing.T) {
+	h := setupWithWeb(t)
+	for _, path := range []string{"/", "/themes", "/sessions/abc/history", "/deep/unknown/route"} {
+		rec := getWithAccept(t, h, path, "text/html")
+		if rec.Code != http.StatusOK {
+			t.Errorf("%s: expected 200, got %d", path, rec.Code)
+		}
+	}
+}
+
+func TestStaticAssetsAreServed(t *testing.T) {
+	h := setupWithWeb(t)
+	rec := getWithAccept(t, h, "/assets/app.js", "*/*")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("asset should be served, got %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "console.log") {
+		t.Error("unexpected asset body")
+	}
+}
+
+// TestMissingAssetDoesNotReturnShell guards against the subtle failure where a broken
+// asset path silently returns index.html and the browser reports a syntax error.
+func TestMissingAssetDoesNotReturnShell(t *testing.T) {
+	h := setupWithWeb(t)
+	rec := getWithAccept(t, h, "/assets/missing.js", "text/html")
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("missing asset should 404, got %d", rec.Code)
+	}
+}
+
+func TestApiStillWorksWithWebMounted(t *testing.T) {
+	h := setupWithWeb(t)
+	rec := getWithAccept(t, h, "/themes", "application/json")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("themes API broke with web mounted: %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "themes") {
+		t.Error("expected theme JSON")
+	}
+}

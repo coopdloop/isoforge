@@ -81,6 +81,9 @@ func (s *Server) Handler() http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Recovery(), s.requestLogger())
+	// Must precede route registration so browser navigations to dual-purpose paths
+	// such as /sessions/:id render the SPA instead of returning JSON.
+	r.Use(s.spaFallback())
 
 	r.GET("/health", s.handleHealth)
 	r.GET("/ws/preview/:session_id", s.handlePreviewSocket)

@@ -1,4 +1,4 @@
-.PHONY: help build test test-go test-py test-cli fmt lint clean dev install golden
+.PHONY: help build build-web test test-go test-py test-cli test-web fmt lint clean dev install golden conformance
 
 GOBIN := isoforged
 PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
@@ -7,10 +7,13 @@ help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-build: ## Build the Go daemon for this platform
+build: build-web ## Build the web bundle and the Go daemon
 	go build -trimpath -ldflags="-s -w" -o $(GOBIN) ./cmd/isoforged
 
-build-all: ## Cross-compile the daemon for every supported platform
+build-web: ## Build the React bundle that gets embedded in the daemon
+	cd web && pnpm install --silent && pnpm build
+
+build-all: build-web ## Cross-compile the daemon for every supported platform
 	@mkdir -p dist
 	@for platform in $(PLATFORMS); do \
 		os=$${platform%/*}; arch=$${platform#*/}; \
@@ -21,7 +24,7 @@ build-all: ## Cross-compile the daemon for every supported platform
 	done
 	@ls -lh dist/
 
-test: test-go test-py test-cli ## Run every test suite
+test: test-go test-py test-cli test-web ## Run every test suite
 
 test-go: ## Run Go tests
 	go test ./...
@@ -31,6 +34,13 @@ test-py: ## Run the Python service tests
 
 test-cli: ## Run the CLI tests
 	cd cli && uv run --extra dev pytest -q
+
+test-web: ## Run the web conformance tests (TS must match Python exactly)
+	cd web && pnpm test
+
+conformance: ## Regenerate the TS/Python geometry conformance fixture
+	cd services && uv run python ../scripts/gen_conformance.py
+	@echo "regenerated; verify with: cd web && pnpm test"
 
 golden: ## Regenerate render golden files (review the diff before committing)
 	cd services && ISOFORGE_UPDATE_GOLDEN=1 uv run --extra dev --extra raster pytest -q
@@ -47,6 +57,7 @@ fmt: ## Format Go and Python sources
 
 lint: ## Vet and lint
 	go vet ./...
+	cd web && pnpm lint
 	@test -z "$$(gofmt -l cmd internal web)" || (echo "gofmt needed:"; gofmt -l cmd internal web; exit 1)
 	cd services && uv run --extra dev ruff check isoforge_py
 	cd cli && uv run --extra dev ruff check isoforge
@@ -62,6 +73,6 @@ dev: build ## Start the stack for manual testing
 	cd cli && uv run isoforge chat
 
 clean: ## Remove build artifacts
-	rm -rf $(GOBIN) dist cli/isoforge/bin
+	rm -rf $(GOBIN) dist cli/isoforge/bin web/dist web/node_modules
 	find . -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
 	find . -name .pytest_cache -prune -exec rm -rf {} + 2>/dev/null || true

@@ -15,3 +15,7 @@ uv.lock
 /isoforge-store
 /dist/
 cli/isoforge/bin/
+web/dist/assets/
+web/dist/index.html
+web/.vite/
+web/tsconfig.tsbuildinfo
