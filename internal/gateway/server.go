@@ -181,6 +181,7 @@ func (s *Server) handleCreateSession(c *gin.Context) {
 	}
 
 	projectID := req.ProjectID
+	resumedVersion := 0
 	if projectID == "" {
 		name := req.Name
 		if name == "" {
@@ -192,13 +193,21 @@ func (s *Server) handleCreateSession(c *gin.Context) {
 			return
 		}
 		projectID = project.ID
-	} else if _, err := s.store.GetProject(projectID); err != nil {
+	} else if existing, err := s.store.GetProject(projectID); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "project not found"})
 		return
+	} else if len(req.Scene) == 0 && existing.VersionCount > 0 {
+		// Resuming an existing project: seed the agent with its current design so a
+		// follow-up turn patches that work rather than starting from nothing.
+		if current, err := s.store.GetCurrentScene(projectID); err == nil {
+			req.Scene = current.Scene
+			resumedVersion = current.VersionNumber
+		}
 	}
 
 	// Seeding a scene at session start is how `isoforge chat --continue` resumes.
-	if len(req.Scene) > 0 {
+	// A resumed project already has this exact scene stored, so skip re-saving it.
+	if len(req.Scene) > 0 && resumedVersion == 0 {
 		if result := isodsl.ValidateBytes(req.Scene); !result.Valid {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "seed scene failed validation", "errors": result.Errors,
@@ -284,6 +293,15 @@ func (s *Server) handleEndSession(c *gin.Context) {
 	// Best-effort: a dead agent must not prevent the user ending their session.
 	if err := s.backend.DeleteConversation(c.Request.Context(), session.ConversationID); err != nil {
 		s.log.Warn("could not end agent conversation", "error", err)
+	}
+
+	// A session the user abandoned before designing anything leaves an empty project
+	// behind. Those accumulate on every `isoforge chat` and clutter the launcher, so
+	// drop them; projects with any version are always preserved.
+	if project, err := s.store.GetProject(session.ProjectID); err == nil && project.VersionCount == 0 {
+		if err := s.store.DeleteProject(session.ProjectID); err != nil {
+			s.log.Debug("could not clean up empty project", "error", err)
+		}
 	}
 
 	s.mu.Lock()

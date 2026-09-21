@@ -250,10 +250,10 @@ export PNG/SVG/icon bundle, entirely from the terminal.
 | M3 agent orchestrator, 3 providers, repair loop | done |
 | M4 gateway: REST + WebSocket hub, session orchestration | done |
 | M5 CLI: chat REPL, terminal preview, supervisor | done |
-| M6 web workbench | **next** |
-| M7 packaging | pending |
+| M6 web workbench: React, conformance-tested renderer | done |
+| M7 packaging: platform wheels with bundled daemon | done |
 
-**295 tests passing** (76 Go, 198 Python services, 21 CLI).
+**454 tests passing** (85 Go, 198 Python services, 21 CLI, 150 web conformance).
 
 ### Verified end-to-end
 Against live OpenRouter + Claude Sonnet 4.5, from a clean data directory:
@@ -262,9 +262,18 @@ Against live OpenRouter + Claude Sonnet 4.5, from a clean data directory:
 - *"make the top cube glow"* → **a 1-op patch** (`add /effects/glow`), not a rewrite
 - history, diff, revert, PNG/SVG/icon-bundle export, live WebSocket preview all working
 
-### What M6 needs
-The web UI is the last large surface. It consumes only the gateway's REST + WS API, which
-is already complete and exercised by tests, so the risk is low. The one thing to get right
-is porting `services/isoforge_py/isodsl/geometry.py` to TypeScript as a direct
-transliteration, pinned to the same fixtures — if the browser preview and the exporter
-disagree, the product's core promise breaks.
+### Cross-implementation safety
+Three renderers now exist: the Python exporter (reference), the Go validator, and the
+TypeScript browser preview. They are pinned to shared fixtures so they cannot drift:
+
+- `testdata/golden/*.svg` — exact output bytes of the Python renderer
+- `testdata/golden/scene-hashes.txt` — canonical hashes, checked by Go and Python
+- `testdata/golden/geometry-conformance.json` — 150 projection, shading and
+  tessellation cases the TypeScript preview must reproduce exactly
+
+Each was verified to catch real drift: perturbing a projection constant by 1e-5 fails
+the conformance suite, and 1e-4 fails the golden SVGs.
+
+### Remaining polish
+- Command palette (Cmd+K) and the standalone history/export routes from the spec
+- Publishing to PyPI and wiring CI to build release wheels

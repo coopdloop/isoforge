@@ -662,3 +662,70 @@ func TestApiStillWorksWithWebMounted(t *testing.T) {
 		t.Error("expected theme JSON")
 	}
 }
+
+// TestEmptyProjectCleanedOnSessionEnd guards against empty projects piling up: every
+// `isoforge chat` creates one, and abandoning the session should not leave clutter in
+// the launcher.
+func TestEmptyProjectCleanedOnSessionEnd(t *testing.T) {
+	srv, _, h := setup(t)
+	sessionID, projectID := createSession(t, h)
+
+	do(t, h, http.MethodDelete, "/sessions/"+sessionID, nil)
+
+	if _, err := srv.store.GetProject(projectID); err == nil {
+		t.Error("empty project should have been cleaned up")
+	}
+}
+
+// TestProjectWithVersionsSurvivesSessionEnd is the other half: real work is never
+// deleted, however the session ends.
+func TestProjectWithVersionsSurvivesSessionEnd(t *testing.T) {
+	srv, fake, h := setup(t)
+	sessionID, projectID := createSession(t, h)
+
+	fake.mu.Lock()
+	fake.turnResponse = TurnResponse{Scene: testScene(t), Changed: true, Summary: "design"}
+	fake.mu.Unlock()
+	do(t, h, http.MethodPost, "/sessions/"+sessionID+"/messages", map[string]any{"message": "x"})
+
+	do(t, h, http.MethodDelete, "/sessions/"+sessionID, nil)
+
+	if _, err := srv.store.GetProject(projectID); err != nil {
+		t.Errorf("project with versions must survive: %v", err)
+	}
+}
+
+// TestResumingProjectSeedsAgentWithCurrentScene covers opening a past design: the
+// agent must receive the existing scene so the next turn patches it rather than
+// designing from scratch.
+func TestResumingProjectSeedsAgentWithCurrentScene(t *testing.T) {
+	_, fake, h := setup(t)
+	firstSession, projectID := createSession(t, h)
+
+	fake.mu.Lock()
+	fake.turnResponse = TurnResponse{Scene: testScene(t), Changed: true, Summary: "original"}
+	fake.mu.Unlock()
+	do(t, h, http.MethodPost, "/sessions/"+firstSession+"/messages", map[string]any{"message": "x"})
+
+	rec, body := do(t, h, http.MethodPost, "/sessions", map[string]any{"project_id": projectID})
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("resume failed: %d %s", rec.Code, rec.Body.String())
+	}
+	if body["project_id"] != projectID {
+		t.Errorf("resumed session should reuse the project, got %v", body["project_id"])
+	}
+
+	// Resuming must not duplicate the existing version.
+	_, hist := do(t, h, http.MethodGet, "/scenes/"+projectID+"/history", nil)
+	if hist["count"].(float64) != 1 {
+		t.Errorf("resume should not create a new version, got %v", hist["count"])
+	}
+}
+
+func TestResumingUnknownProject404s(t *testing.T) {
+	_, _, h := setup(t)
+	rec, _ := do(t, h, http.MethodPost, "/sessions", map[string]any{"project_id": "nope"})
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", rec.Code)
+	}
+}

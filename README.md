@@ -36,20 +36,27 @@ structured document: every change is a validated, reviewable diff.
 
 ## Install
 
-Requires Python 3.11+ and Go 1.25+ to build from source.
-
 ```bash
-git clone https://github.com/coopdloop/isoforge
-cd isoforge
-make install
+pipx install isoforge
 export OPENROUTER_API_KEY=sk-or-...   # or ANTHROPIC_API_KEY, or run Ollama
 isoforge doctor
+```
+
+The wheel bundles everything: the Go daemon, the web UI, and a static SVG rasterizer.
+No system libraries, no Node, no Go toolchain.
+
+From source (needs Python 3.11+, Go 1.25+, pnpm):
+
+```bash
+git clone https://github.com/coopdloop/isoforge && cd isoforge
+make install
 ```
 
 ## Usage
 
 ```bash
 isoforge chat                          # start designing
+isoforge chat --resume                 # continue your most recent design
 isoforge chat --continue logo.isoforge.json   # resume from a file
 isoforge chat -p ollama -m qwen3:8b    # local, offline
 
@@ -85,9 +92,13 @@ fails, your existing design is left untouched.
 
 Rendering is deterministic by construction: the same scene always produces
 byte-identical SVG. Paint order is derived from geometry (`x+y+z`, ties broken by `id`)
-rather than array order, so adding a shape can never silently restack the others. Golden
-tests pin exact output bytes, and the Go and Python implementations are pinned to a
-shared hash fixture so they cannot drift apart.
+rather than array order, so adding a shape can never silently restack the others.
+
+Three implementations must agree — the Python exporter, the Go validator, and the
+TypeScript browser preview — so all three are pinned to shared fixtures: golden SVG
+bytes, a canonical-hash file, and a 150-case geometry conformance suite. If the browser
+preview ever drifted from the exporter, you would be designing against a lie; these
+tests are what prevent that.
 
 ## The IsoDSL
 
@@ -113,18 +124,20 @@ Full schema: [`schemas/isodsl/v1/isodsl.schema.json`](schemas/isodsl/v1/isodsl.s
 ## Development
 
 ```bash
-make build      # compile the Go daemon
-make test       # 295 tests: Go, Python services, CLI
+make build        # web bundle + Go daemon
+make test         # 454 tests: Go, Python services, CLI, web conformance
 make lint
-make golden     # regenerate render goldens (review the diff!)
+make wheels       # release wheels for macOS/Linux x arm64/amd64
+make golden       # regenerate render goldens (review the diff!)
+make conformance  # regenerate the TS/Python geometry fixture
 ```
 
 Implementation plan and architecture decisions: [`PLAN.md`](PLAN.md)
 
 ## Status
 
-Working end to end from the CLI. The React web workbench (M6) and pipx packaging (M7)
-are still to come.
+Feature-complete for v1: CLI, web workbench, deterministic exports, and installable
+wheels for macOS and Linux on arm64 and amd64.
 
 ## License
 

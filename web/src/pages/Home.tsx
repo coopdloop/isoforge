@@ -5,15 +5,25 @@
  * rather than a creator: it lists what is live and what has been designed before.
  */
 
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { Link, useNavigate } from 'react-router-dom'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 import { IsoPreviewCanvas } from '@/components/IsoPreviewCanvas'
-import { api } from '@/lib/api'
+import { pushToast } from '@/components/chrome'
+import { ApiError, api } from '@/lib/api'
 
 export function Home() {
+  const navigate = useNavigate()
   const sessions = useQuery({ queryKey: ['sessions'], queryFn: api.listSessions })
   const projects = useQuery({ queryKey: ['projects'], queryFn: api.listProjects })
+
+  // Opening a past design starts a session on that project, so the agent resumes with
+  // the existing scene in context instead of designing from scratch.
+  const resume = useMutation({
+    mutationFn: (projectId: string) => api.createSession({ project_id: projectId }),
+    onSuccess: (session) => navigate(`/sessions/${session.id}`),
+    onError: (error: ApiError) => pushToast(error.message, 'error'),
+  })
 
   const active = sessions.data ?? []
   const designed = (projects.data ?? []).filter((p) => p.version_count > 0)
@@ -61,9 +71,21 @@ export function Home() {
             <EmptyState hasSessions={active.length > 0} />
           ) : (
             <div className="grid gap-3 sm:grid-cols-3">
-              {designed.map((project) => (
-                <ProjectCard key={project.id} projectId={project.id} name={project.name} versions={project.version_count} />
-              ))}
+              {designed.map((project) => {
+                const live = active.find((s) => s.project_id === project.id)
+                return (
+                  <ProjectCard
+                    key={project.id}
+                    projectId={project.id}
+                    name={project.name}
+                    versions={project.version_count}
+                    busy={resume.isPending && resume.variables === project.id}
+                    onOpen={() =>
+                      live ? navigate(`/sessions/${live.id}`) : resume.mutate(project.id)
+                    }
+                  />
+                )
+              })}
             </div>
           )}
         </section>
@@ -76,10 +98,14 @@ function ProjectCard({
   projectId,
   name,
   versions,
+  busy,
+  onOpen,
 }: {
   projectId: string
   name: string
   versions: number
+  busy: boolean
+  onOpen: () => void
 }) {
   const scene = useQuery({
     queryKey: ['scene', projectId],
@@ -87,15 +113,19 @@ function ProjectCard({
   })
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/30 p-3">
+    <button
+      onClick={onOpen}
+      disabled={busy}
+      className="group rounded-lg border border-zinc-800 bg-zinc-900/30 p-3 text-left transition hover:border-zinc-600 disabled:opacity-50"
+    >
       <div className="mb-2 flex aspect-square items-center justify-center rounded bg-zinc-950/50">
         <IsoPreviewCanvas scene={scene.data?.scene} className="h-full w-full p-2" />
       </div>
       <p className="truncate text-sm text-zinc-300">{name}</p>
       <p className="text-xs text-zinc-600">
-        {versions} version{versions === 1 ? '' : 's'}
+        {busy ? 'opening…' : `${versions} version${versions === 1 ? '' : 's'}`}
       </p>
-    </div>
+    </button>
   )
 }
 

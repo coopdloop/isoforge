@@ -192,6 +192,8 @@ def chat(
     model: Optional[str] = typer.Option(None, "--model", "-m", help="Model id override."),
     provider: Optional[str] = typer.Option(
         None, "--provider", "-p", help="openrouter, anthropic or ollama."),
+    resume: bool = typer.Option(
+        False, "--resume", "-r", help="Continue the most recent design instead of starting fresh."),
     port: Optional[int] = typer.Option(None, "--port", help="Gateway port."),
     no_browser: bool = typer.Option(False, "--no-browser", help="Do not open the web preview."),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show service logs."),
@@ -208,9 +210,18 @@ def chat(
 
     workspace = attach_or_start(port=port, quiet=not verbose)
 
+    resume_project = ""
+    if resume:
+        if resume_project := resolve_project(workspace):
+            console.print("[dim]resuming your most recent design[/dim]")
+        else:
+            console.print("[dim]nothing to resume; starting fresh[/dim]")
+
     try:
         session = workspace.client.create_session(
-            name=continue_from.stem if continue_from else "", scene=seed_scene
+            name=continue_from.stem if continue_from else "",
+            scene=seed_scene,
+            project_id=resume_project,
         )
     except GatewayError as exc:
         show_gateway_error(exc)
@@ -235,8 +246,9 @@ def chat(
         except Exception:  # noqa: BLE001 - a missing browser must not break the CLI
             pass
 
-    if seed_scene:
-        console.print("[dim]resumed from file[/dim]")
+    if seed_scene or resume_project:
+        if seed_scene:
+            console.print("[dim]resumed from file[/dim]")
         render_preview(workspace)
 
     try:

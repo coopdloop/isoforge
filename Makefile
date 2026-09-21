@@ -1,4 +1,4 @@
-.PHONY: help build build-web test test-go test-py test-cli test-web fmt lint clean dev install golden conformance
+.PHONY: help build build-web test test-go test-py test-cli test-web fmt lint clean dev install golden conformance wheel wheels
 
 GOBIN := isoforged
 PLATFORMS := darwin/arm64 darwin/amd64 linux/arm64 linux/amd64
@@ -67,6 +67,21 @@ install: build ## Install the CLI with the daemon bundled
 	cp $(GOBIN) cli/isoforge/bin/
 	cd cli && uv pip install -e .
 	@echo "installed; try: isoforge doctor"
+
+wheel: build ## Build installable wheels for this platform
+	@rm -rf dist/wheels && mkdir -p dist/wheels
+	cd services && uv build --wheel -o ../dist/wheels
+	cd cli && uv build --wheel -o ../dist/wheels
+	@ls -lh dist/wheels/
+
+wheels: build-web build-all ## Build release wheels for every supported platform
+	@rm -rf dist/wheels && mkdir -p dist/wheels
+	cd services && uv build --wheel -o ../dist/wheels
+	@for platform in $(PLATFORMS); do \
+		echo "  packaging $$platform"; \
+		(cd cli && ISOFORGE_TARGET_PLATFORM=$$platform uv build --wheel -o ../dist/wheels) || exit 1; \
+	done
+	@ls -lh dist/wheels/
 
 dev: build ## Start the stack for manual testing
 	@echo "starting services; Ctrl-C to stop"
