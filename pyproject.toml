@@ -1,0 +1,49 @@
+[project]
+name = "isoforge"
+version = "0.1.0"
+description = "Design isometric cube-art logos by chatting with an LLM"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "typer>=0.15",
+  "rich>=13.9",
+  "httpx>=0.27",
+  "jsonschema>=4.23",
+  "jsonpatch>=1.33",
+  "pillow>=11.0",
+  "resvg-py>=0.1.7",
+]
+
+[project.scripts]
+isoforge = "isoforge.cli:run"
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["isoforge"]
+
+# The IsoDSL schema lives at the repo root; vendor it so installed copies can find it.
+[tool.hatch.build.targets.wheel.force-include]
+"schemas/isodsl/v1/isodsl.schema.json" = "isoforge/isodsl/isodsl.schema.json"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+ignore = [
+  # typer.Option in argument defaults is the required idiom for this library.
+  "B008",
+  # Provider detection must never raise; a bare continue is the point.
+  "S112",
+]

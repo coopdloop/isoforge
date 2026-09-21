@@ -3,20 +3,10 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
-node_modules/
 dist/
 build/
 *.egg-info/
-data/
-exports/
 .DS_Store
-uv.lock
-/isoforged
-/isoforge-store
-/dist/
-cli/isoforge/bin/
-web/dist/assets/
-web/dist/index.html
-web/.vite/
-web/tsconfig.tsbuildinfo
-dist/wheels/
+
+# Vendored at build time from schemas/isodsl/v1/
+isoforge/isodsl/isodsl.schema.json

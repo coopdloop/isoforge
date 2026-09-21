@@ -1,279 +1,82 @@
-# IsoForge — Implementation Plan
+# IsoForge — implementation notes
 
-> Source spec: `coopdloop/a-llm-cli-chat-where-you-talk-with-and-i-spec` (`product.json`, theorycraft v1.0.0)
+A CLI that turns a conversation into an isometric cube-art logo. One Python process,
+no server, no database.
 
-Conversational CLI that generates isometric cube-art logos by having an LLM edit a
-strict typed JSON scene graph (**IsoDSL**), deterministically rendered to SVG/PNG/icon
-bundles with full version history. Local-first, no accounts, no cloud.
-
----
-
-## 1. Target architecture (per spec)
-
-| Component | Lang | Port | Role |
-|---|---|---|---|
-| `isoforge` CLI | Python + Typer + rich | — | User entrypoint; subprocess-manages the rest |
-| `iso_gateway` | Go + gin + gorilla/websocket | 4747 | Sole entrypoint; REST + WS hub; serves built React bundle |
-| `agent_orchestrator` | Python + FastAPI | 5001 | LLM function-calling, IsoDSL validation, conversation state |
-| `render_engine` | Python + FastAPI | 5001 | Deterministic SVG/PNG/icon-bundle export (same app as agent) |
-| `scene_store` | Go + chi + SQLite | 5003 | Versions, history, diff, revert, themes (same process as gateway) |
-| Web preview | React + Vite + TS + shadcn/tailwind | (via 4747) | Three-pane workbench, live SVG preview |
-| `@isoforge/client` | TypeScript SDK | — | Typed `GatewayClient` used by the web UI |
-
-54 API routes, 9 tables, 3 accepted ADRs. Contracts are already pinned by the spec —
-we implement to them rather than redesigning.
-
-### Critical architectural constraint (ADR-001)
-Raw LLM text is **never** parsed as design data. Only `set_scene` / `patch_scene`
-tool-call payloads are trusted, and only after JSON Schema validation. Every accepted
-mutation produces a new immutable `scene_versions` row. This must be enforced in code,
-not prompts.
-
----
-
-## 2. Proposed repo layout
+## Layout
 
 ```
 isoforge/
-├── schemas/isodsl/v1/isodsl.schema.json   # single source of truth, vendored to all services
-├── cmd/
-│   ├── iso-gateway/                       # Go main
-│   └── scene-store/                       # Go main
-├── internal/                              # shared Go: isodsl validate, httpx, config
-├── services/
-│   ├── agent_orchestrator/                # Python pkg
-│   └── render_engine/                     # Python pkg
-├── cli/isoforge/                          # Typer CLI (the pipx-installed package)
-├── web/                                   # Vite React app
-├── packages/client/                       # @isoforge/client TS SDK (generated types)
-├── testdata/scenes/                       # golden IsoDSL fixtures
-└── Makefile / Taskfile
+├── isodsl/      schema, validation, geometry, color     ~1,400 lines
+├── agent/       LLM tool-calling, repair loop, prompts  ~1,300
+├── render/      SVG, PNG, icon bundles                    ~530
+├── cli.py       chat REPL and commands                    ~600
+├── store.py     versions as JSON files                     ~190
+└── diff.py      identity-based scene diffing               ~110
 ```
 
-Go modules: one `go.mod` at root with two `cmd/` binaries (shared `internal/` for the
-IsoDSL validator + client structs). Python: one `uv` workspace with two packages plus
-the CLI, sharing an `isodsl` model package (pydantic models generated from the schema).
+Plus `schemas/isodsl/v1/` (the shared schema and its semantic rules) and `testdata/`
+(fixtures and golden SVG bytes).
 
----
+## Design decisions
 
-## 3. The IsoDSL schema — do this first
+**IsoDSL is the product.** The spec never defined it, so it was the real design work.
+`additionalProperties: false` everywhere is what makes LLM output trustworthy: the
+model cannot invent a field, and every rejection carries a stable error code
+(`ISO001`…) with remedy text that feeds the repair loop.
 
-Nothing else can be built or tested until this exists. The spec describes it but never
-defines it, so this is the main design work we own.
+**Paint order is `(x+y+z)` then `id`, never array order.** This is what lets a patch
+add a shape without silently restacking unrelated geometry — the property that makes
+diffs trustworthy.
 
-Sketch to ratify before coding:
+**OKLab for auto-shading.** One `fill` derives three faces. Naive HSL lightness shifts
+turn saturated brand colors muddy; OKLab keeps them on-hue.
 
-```jsonc
-{
-  "isodsl_version": "1.0.0",
-  "canvas": { "width": 512, "height": 512, "background": null },
-  "grid":   { "w": 8, "d": 8, "h": 8, "cell": 32 },      // 1x1x1 unit cells
-  "camera": { "projection": "isometric", "angle": 30 },
-  "palette": { "id": "…", "colors": { "top": "#…", "left": "#…", "right": "#…", "accent": "#…" } },
-  "shapes": [
-    { "id": "c1", "type": "cube", "at": {"x":0,"y":0,"z":0},
-      "size": {"x":1,"y":1,"z":1},
-      "faces": { "top": {"fill":"@palette.top"}, "left": {...}, "right": {...} },
-      "opacity": 1, "visible": true }
-    // type ∈ cube | slab | ramp | cylinder | plane | group
-  ],
-  "effects": { "outline": {...}, "shadow": {...}, "glow": {...} }
-}
-```
+**Versions are files, not rows.** `v1.isoforge.json`, `v2.isoforge.json`, … in a
+project directory. History is a directory listing, diff is reading two files, revert is
+copying one forward. More git-friendly than a database, which matters for a tool whose
+premise is designs you can version like source.
 
-Hard rules baked into the schema:
-- integer grid coordinates only, bounded by `grid`
-- `shapes[].id` unique; deterministic paint order = **depth sort by `(x+y+z)`**, ties broken by `id` — never array order, so output is stable across patches
-- colors are `#RRGGBB(AA)` or `@palette.*` references, nothing else
-- `additionalProperties: false` everywhere (this is what makes LLM output trustworthy)
+**Revert appends, never truncates.** Reverting to v2 from v5 creates v6. In a tool
+where reverts are cheap and frequent, destroying v3–v5 would be a nasty surprise.
 
-Deliverables: `isodsl.schema.json`, a Go validator (`santhosh-tekuri/jsonschema`), a
-Python validator (`jsonschema` + generated pydantic models), and 8–10 golden fixtures
-in `testdata/scenes/` used by every layer's tests.
+**Diffs match shapes by `id`, not position.** A positional diff reports "everything
+changed" when one shape is inserted at the front — useless in a UI whose job is showing
+what the model actually edited.
 
----
+**Determinism is enforced by test.** Golden SVG bytes are pinned and verified to catch
+drift as small as `1e-4` in a projection constant. Fixed float precision, schema key
+order, and stable filter ids; no timestamps or random ids in output.
 
-## 4. Milestones
+## History
 
-### M0 — Foundations — **DONE (Python side)**
-- [x] `schemas/isodsl/v1/isodsl.schema.json` — strict, `additionalProperties:false` throughout
-- [x] `schemas/isodsl/v1/RULES.md` — semantic rules ISO001–ISO022 with stable codes
-- [x] 5 valid + 8 invalid fixtures in `testdata/scenes/`, one per rule
-- [x] Python validator: schema layer + semantic layer, structured errors carrying remedy text for the LLM repair loop
-- [x] Canonical serializer (fixed precision, schema key order, stable hashing)
-- [ ] Go validator mirroring the same codes
-- [ ] Makefile + CI
+This started as a generated product spec describing four microservices (Go gateway, Go
+store, two Python services), a SQLite database with nine tables, a React workbench, and
+a TypeScript SDK. That version was built and works — it is preserved on the
+`full-architecture` branch.
 
-### M1 — Deterministic render engine — **core DONE**
-- [x] Isometric/dimetric projection, pinned coordinate tests
-- [x] All 5 primitives tessellated: cube, ramp (4 facings), cylinder, plane, group
-- [x] OKLab perceptual auto-shading (hue-preserving, unlike naive HSL)
-- [x] Hand-written SVG writer — byte-stable by construction, auto-fit framing, effects
-- [x] Golden-file tests, verified to catch a 0.0001 drift in a projection constant
-- [ ] PNG rasterization + icon bundles
-- [ ] FastAPI surface
+It was then stripped back, because the actual ask was a CLI with a feedback loop that
+ends in a logo. The measurements that prompted it:
 
-**Status:** 105 tests passing. `render(scene)` is byte-identical across repeats, immune
-to shape-array order and JSON key order.
-
-### M1 remainder — **DONE**
-- [x] PNG via `resvg-py` (no Cairo system dep), normalised through Pillow for byte-stability
-- [x] Icon bundles: PNG ladder 16→1024, `favicon.ico`, Apple `icon.iconset/` layout
-      (verified: `iconutil -c icns` produces a real `.icns`), deterministic zips
-- [x] FastAPI: `/render/svg`, `/render/png`, `/export/*`, `/import/isoforge-json`,
-      `/diff/render`, `/exports/{id}[/download]`, `/validate-scene`, `/schema/isodsl`
-- [x] Export store with restart-survivable index and path-traversal defense
-
-### M2 — scene_store — **DONE**
-- SQLite schema + migrations for all 9 tables (spec uses `UUID`/`TIMESTAMPTZ`/`JSONB`; map to `TEXT`/`TEXT ISO-8601`/`TEXT` + `json_valid()` CHECK, UUIDv4 generated in Go)
-- Canonical scene/theme JSON written to `SCENES_DIR` as files; SQLite holds metadata + history (ADR-003)
-- Immutable append-only `scene_versions`; `projects.current_scene_version_id` is the head pointer
-- `revert` = **new version** whose `scene_json` copies an older one (never destructive)
-- Diff via RFC-6902 JSON Patch between two versions
-- Schema validation enforced on every write
-- All 23 `scene_store` routes + builtin themes seeded on first boot
-
-**Exit:** create project → 5 versions → history/diff/revert round-trips; kill & restart, state intact.
-
-### M3 — agent_orchestrator — **DONE**
-- [x] Three adapters: **OpenRouter** (default), **Anthropic**, **Ollama**
-- [x] Ollama shim: native tool calling with automatic fallback to JSON-schema-constrained
-      decoding, so local models honour ADR-001 identically to hosted ones
-- [x] Tools: `set_scene`, `patch_scene` (RFC-6902), `save_theme`; `patch_scene` is
-      withheld until a scene exists, removing a whole class of failure
-- [x] Validate→repair loop, bounded at 2 retries, feeding back structured ISO0xx codes
-      plus remedy text. A failed turn leaves the previous design untouched.
-- [x] Theme lock with deterministic literal→palette clamping before validation
-- [x] System prompt encoding the design rules (silhouette-first, three tones, grid alignment)
-- [x] `/tools`, `/providers`, `/conversations/*`, `/reload`, `/theme-lock`
-
-**Verified against a live model (OpenRouter + Claude Sonnet 4.5):** "a forge anvil made
-of cubes, hot orange and dark steel" produced a valid 6-shape scene with 0 repairs;
-the follow-up "make it glow more, add a drop shadow" correctly emitted a **1-op patch**
-rather than a rewrite. Caught and fixed a real renderer bug this way: the glow filter
-was defined but never referenced, so glow silently did nothing.
-
-### M4 — iso_gateway — **DONE**
-- gin server on 4747; reverse-proxy/coordinate the three backends
-- `POST /sessions/{id}/messages` orchestrates: agent turn → validate → store version → broadcast over WS → return to CLI
-- `GET /ws/preview/{session_id}`: gorilla/websocket hub, fan-out `scene.updated` / `export.complete` / `validation.failed`, with heartbeat + reconnect/backoff
-- Embed the built React bundle via `go:embed`, SPA fallback on `GET /*`
-- Resilience (ADR-002): backend process crash → structured error to CLI/UI, gateway stays up
-
-**Exit:** two browser tabs + CLI all see the same scene update within ~100ms.
-
-### M5 — CLI — **DONE** ← *first fully usable product*
-Typer + rich. Subprocess supervisor: pick free ports, start all 3 backends, health-gate, open browser, tear down cleanly on exit/SIGINT.
-
-```
-isoforge chat [--model …] [--continue scene.isoforge.json] [--no-browser]
-isoforge history | diff <a> <b> | revert <v>
-isoforge export svg|png|icons [--size …] [--out …]
-isoforge theme save|list|import|apply
-```
-In-chat slash commands: `/theme`, `/revert`, `/export`, `/undo`, `/json`.
-Rich TUI: streaming reply, inline colored DSL diff, ASCII-art fallback preview.
-
-**Exit:** `pipx install .` → `isoforge chat` → describe → export PNG, all in one terminal.
-
-### M6 — Web workbench (2–3 days)
-- Vite + React + TS + tailwind + shadcn/ui, dark-mode-first, accent color driven by active palette
-- `@isoforge/client` SDK first (types generated from the route table), then UI consumes only that
-- Routes: `/`, `/sessions/:id` (three-pane workbench), `/sessions/:id/history`, `/themes`, `/sessions/:id/export`
-- Components: `IsoPreviewCanvas` (client-side SVG projection — **must share the exact same projection math as M2**, port it to TS with the same golden fixtures), `DSLDiffViewer`, `ValidationBadge`, `CommandPalette` (⌘K), `AppShellSidebar`, `ConnectionStatusIndicator`, `ToastStack`, `LoadingSkeletonScene`, `ConfirmDangerDialog`, `SlashCommandHint`
-- zustand for session/scene state, react-query for server state, WS pushes invalidate
-
-**Exit:** chat in the browser, watch the cube rebuild live, scrub the version filmstrip, export.
-
-### M7 — Packaging & polish (1 day)
-- Cross-compile Go binaries (darwin/linux × arm64/amd64), ship inside the Python wheel
-- `pipx install isoforge` works from a clean machine; PyInstaller path as alternative
-- Docs, example scenes, README with a rendered logo made *by* IsoForge (dogfood)
-
----
-
-## 5. Sequencing rationale
-
-```
-M0 schema ──┬── M1 render ──┐
-            ├── M2 store ───┼── M4 gateway ── M5 CLI ── M7 package
-            └── M3 agent ───┘                     └──── M6 web
-```
-M1/M2/M3 are independent after M0 and can be parallelized. **M5 is the first shippable
-increment** — the CLI + backends is a complete product without the web UI. M6 is the
-biggest surface but lowest risk since it only consumes the SDK.
-
-Rough total: ~10–12 focused days solo.
-
----
-
-## 6. Key risks & mitigations
-
-| Risk | Mitigation |
+| | lines |
 |---|---|
-| **Determinism drift** — same JSON → different bytes across OS/lib versions | Pin SVG serialization ourselves (don't trust lib ordering); sha256 golden tests in CI on macOS + Linux; fixed float precision |
-| **Two renderers diverge** (Python engine vs TS preview) | Shared fixture suite asserting identical projection coords; TS port is a direct transliteration, reviewed as such |
-| **LLM emits invalid IsoDSL** | `additionalProperties:false` + validate→repair loop (max 2) + never persist unvalidated; log rejection rate as a metric |
-| **LLM rewrites whole scene instead of patching** | Prompt + tool design bias toward `patch_scene`; measure patch-vs-full ratio in tests |
-| **Cairo system dependency breaks pipx installs** | Default to `resvg-py` (static, no system libs); `cairosvg` only as opt-in fallback |
-| **4 processes to supervise** | Health-gated startup with timeout, structured shutdown, port auto-selection, `isoforge doctor` command |
-| **Spec's 54 routes ≫ MVP need** | Implement the ~20 on the critical path first; stub the rest behind a route table so shape is right |
-| **SQLite/Postgres type mismatch in spec** | Explicit mapping documented in migration file; don't silently reinterpret |
+| Product logic (DSL, renderer, agent, CLI) | ~4,070 |
+| Scaffolding for the service architecture | ~8,645 |
 
-### Scope decisions — RATIFIED
-1. **Two processes, not four.** Module boundaries and HTTP contracts from the spec are
-   preserved, but collapsed into two runtimes:
-   - `isoforged` (Go): gateway on **:4747** + scene store on **:5003**, one process. The
-     gateway calls the store through an in-process Go interface (no HTTP hop); the :5003
-     listener still exists for debugging and contract tests.
-   - `isoforge-py` (Python): agent orchestrator + render engine in one FastAPI app on
-     **:5001**. Route namespaces don't collide (only `/health`, which is merged). The
-     gateway points both `AGENT_SERVICE_URL` and `RENDER_SERVICE_URL` at it.
-   Either half can be split back out later without touching a single route.
-2. **No auth.** Localhost-only, single user. `auth_required` in the spec is ignored;
-   the `api_sessions` table is kept for session bookkeeping only.
-3. **Providers:** OpenRouter (default), Anthropic, Ollama. No direct OpenAI adapter —
-   OpenRouter covers it and is the dev default.
+Two-thirds of the code existed to serve an architecture rather than the feature. What
+went: a second IsoDSL validator in Go (1,190 lines) plus the cross-language hash
+fixture needed to stop the two drifting, a nine-table SQLite store (1,679), an HTTP
+gateway between two local processes (2,296), a process supervisor (461), a React app
+(2,479), and a FastAPI layer (432).
 
----
+Result: 3 languages → 1, 2 processes → 1, a 9.8 MB platform-specific wheel → a 59 KB
+universal one, and no pnpm or Go toolchain to build.
 
-## 7. Current status
+What was lost: the live browser preview and multi-client WebSocket sessions. The
+terminal preview covers the feedback loop, and `isoforge export png` covers the rest.
 
-**IsoForge is a working product.** `isoforge chat` → describe a logo → watch it build →
-export PNG/SVG/icon bundle, entirely from the terminal.
+## Possible next steps
 
-| Milestone | Status |
-|---|---|
-| M0 schema, validators (Go + Python), fixtures | done |
-| M1 deterministic render engine, raster, exports | done |
-| M2 scene_store: SQLite, versions, diff, revert, themes | done |
-| M3 agent orchestrator, 3 providers, repair loop | done |
-| M4 gateway: REST + WebSocket hub, session orchestration | done |
-| M5 CLI: chat REPL, terminal preview, supervisor | done |
-| M6 web workbench: React, conformance-tested renderer | done |
-| M7 packaging: platform wheels with bundled daemon | done |
-
-**454 tests passing** (85 Go, 198 Python services, 21 CLI, 150 web conformance).
-
-### Verified end-to-end
-Against live OpenRouter + Claude Sonnet 4.5, from a clean data directory:
-- *"three cubes tumbling down like a waterfall, cyan fading to deep blue, floating with
-  gaps"* → valid 3-shape scene, 0 repairs
-- *"make the top cube glow"* → **a 1-op patch** (`add /effects/glow`), not a rewrite
-- history, diff, revert, PNG/SVG/icon-bundle export, live WebSocket preview all working
-
-### Cross-implementation safety
-Three renderers now exist: the Python exporter (reference), the Go validator, and the
-TypeScript browser preview. They are pinned to shared fixtures so they cannot drift:
-
-- `testdata/golden/*.svg` — exact output bytes of the Python renderer
-- `testdata/golden/scene-hashes.txt` — canonical hashes, checked by Go and Python
-- `testdata/golden/geometry-conformance.json` — 150 projection, shading and
-  tessellation cases the TypeScript preview must reproduce exactly
-
-Each was verified to catch real drift: perturbing a projection constant by 1e-5 fails
-the conformance suite, and 1e-4 fails the golden SVGs.
-
-### Remaining polish
-- Command palette (Cmd+K) and the standalone history/export routes from the spec
-- Publishing to PyPI and wiring CI to build release wheels
+- Prompt tuning: the model sometimes overlaps shapes that should be spaced apart
+- `isoforge watch` to re-export on file change, for embedding in a README
+- Publish to PyPI
