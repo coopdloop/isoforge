@@ -40,22 +40,46 @@ Pure Python, one process, no system dependencies.
 
 ## Usage
 
+**Designing**
+
 ```bash
-isoforge chat                          # start designing
-isoforge chat --name myapp             # name the project
+isoforge chat                          # start a NEW design
+isoforge chat --name nimbus            # ...and name it
+isoforge chat "a cloud logo, sky blue" # ...with an opening prompt
 isoforge chat --resume                 # continue your most recent design
+isoforge chat -P nimbus                # continue a specific design
 isoforge chat -c logo.isoforge.json    # resume from an exported file
 isoforge chat -p ollama -m qwen3:8b    # local, offline
+```
 
-isoforge list                          # your designs
+Every `isoforge chat` starts its own design; unnamed ones get a timestamped handle.
+Use `--resume` or `-P` when you mean to continue an existing one.
+
+**Managing designs**
+
+```bash
+isoforge list                          # all designs, with palettes and tags
+isoforge list --tag work               # filter by tag
+isoforge info -P nimbus                # details for one design
+isoforge edit -P nimbus --name "Nimbus Cloud" --tags work,client
+isoforge edit -P nimbus --rename nimbus-v2     # change its handle
+isoforge delete -P old-draft
+```
+
+**Versions and export**
+
+```bash
 isoforge show                          # render in the terminal
 isoforge history                       # list versions
 isoforge diff v2 v3                    # see exactly what changed
 isoforge revert 2                      # restore v2 (appends a new version)
 isoforge export png --size 512
-isoforge export icons                  # favicon.ico + .icns-ready bundle
+isoforge export svg|json|icons         # icons = favicon.ico + .icns-ready bundle
 isoforge theme save my-brand
 ```
+
+All version commands accept `-P <design>` to target a specific design; without it they
+use your most recent.
 
 In-chat: `/preview` `/history` `/diff` `/revert n` `/export png` `/json` `/themes` `/help`
 
@@ -69,8 +93,20 @@ isoforge chat
    └─ store.py   versions as JSON files on disk
 ```
 
-One process, one language. Designs live in `~/.local/share/isoforge/<project>/` as
-`v1.isoforge.json`, `v2.isoforge.json`, … — readable, diffable, and easy to commit.
+One process, one language. Each design lives in its own directory:
+
+```
+~/.local/share/isoforge/
+├── nimbus/
+│   ├── project.json          name, description, tags
+│   ├── v1.isoforge.json      every turn is a version
+│   ├── v2.isoforge.json
+│   └── latest.isoforge.json  → always the newest
+└── vault/
+    └── ...
+```
+
+Readable, diffable, and easy to commit alongside your code.
 
 ### The guarantee
 

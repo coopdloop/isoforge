@@ -5,6 +5,20 @@ description = "Design isometric cube-art logos by chatting with an LLM"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [{ name = "coopdloop" }]
+keywords = ["logo", "isometric", "cli", "llm", "svg", "icons", "design"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Utilities",
+]
+
 dependencies = [
   "typer>=0.15",
   "rich>=13.9",
@@ -14,6 +28,11 @@ dependencies = [
   "pillow>=11.0",
   "resvg-py>=0.1.7",
 ]
+
+[project.urls]
+Homepage = "https://github.com/coopdloop/isoforge"
+Repository = "https://github.com/coopdloop/isoforge"
+Issues = "https://github.com/coopdloop/isoforge/issues"
 
 [project.scripts]
 isoforge = "isoforge.cli:run"

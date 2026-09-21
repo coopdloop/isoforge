@@ -26,7 +26,7 @@ from .isodsl.errors import IsoValidationError
 from .preview import palette_swatches, print_scene, scene_summary
 from .render.raster import RasterError, build_icon_bundle, render_png
 from .render.svg import render_svg
-from .store import Project, default_data_dir
+from .store import Project, default_data_dir, slugify
 
 app = typer.Typer(
     name="isoforge",
@@ -57,14 +57,17 @@ def show_validation_errors(exc: IsoValidationError) -> None:
 
 
 def resolve_project(name: str | None, *, must_exist: bool = True) -> Project:
-    """Open a named project, or fall back to the most recent one with content."""
+    """Find a project by name or slug, else fall back to the most recent one."""
     if name:
-        return Project.open(name)
+        if found := Project.find(name):
+            return found
+        known = ", ".join(p.slug for p in Project.list_all()[:6]) or "(none yet)"
+        fail(f"no design named '{name}'", hint=f"available: {known}")
     if project := Project.most_recent():
         return project
     if must_exist:
         fail("no designs yet", hint="start designing with:  isoforge chat")
-    return Project.open("untitled")
+    return Project.create()
 
 
 def preview(project: Project, *, version: int | None = None, width: int | None = None) -> None:
@@ -100,7 +103,10 @@ def chat(
     prompt: str | None = typer.Argument(
         None, help="Opening message; omit for an interactive prompt."
     ),
-    name: str | None = typer.Option(None, "--name", "-n", help="Project name."),
+    name: str | None = typer.Option(None, "--name", "-n", help="Name for a new design."),
+    project: str | None = typer.Option(
+        None, "--project", "-P", help="Continue this design (implies --resume)."
+    ),
     resume: bool = typer.Option(False, "--resume", "-r", help="Continue your most recent design."),
     continue_from: Path | None = typer.Option(
         None, "--continue", "-c", help="Resume from an exported .isoforge.json file."
@@ -122,14 +128,17 @@ def chat(
         # Accept both a bare scene and a full export envelope.
         seed_scene = document.get("scene", document)
 
-    if resume:
-        project = resolve_project(name, must_exist=False)
-        if project.latest is None:
-            console.print("[dim]nothing to resume; starting fresh[/dim]")
+    # Naming a design to continue implies continuing it.
+    if project or resume:
+        target = resolve_project(project, must_exist=False)
+        if target.latest is None:
+            console.print("[dim]nothing to resume; starting a new design[/dim]")
+        if name:
+            target.update_meta(name=name)
     else:
-        project = Project.open(name or (continue_from.stem if continue_from else "untitled"))
-    if name:
-        project.set_name(name)
+        # Every `chat` starts its own design, so a second run never appends to the
+        # first. Naming is optional; unnamed designs get a timestamped slug.
+        target = Project.create(name or (continue_from.stem if continue_from else None))
 
     try:
         llm = build_provider(provider, model)
@@ -146,15 +155,16 @@ def chat(
 
     if seed_scene is not None:
         try:
-            project.save(seed_scene, "Imported scene")
+            target.save(seed_scene, "Imported scene")
         except IsoValidationError as exc:
             show_validation_errors(exc)
             raise typer.Exit(1)
-    conversation.scene = project.scene
+    conversation.scene = target.scene
 
     console.print(
         Panel(
             f"[bold]IsoForge[/bold]  [dim]describe a logo and watch it build[/dim]\n"
+            f"[dim]design:[/dim] {target.slug}\n"
             f"[dim]{llm.name} · {llm.model}[/dim]\n"
             f"[dim]type /help for commands, /quit to exit[/dim]",
             border_style="bright_blue",
@@ -162,12 +172,12 @@ def chat(
     )
 
     if conversation.scene is not None:
-        console.print(f"[dim]continuing from v{project.latest.number}[/dim]")
-        preview(project)
+        console.print(f"[dim]continuing from v{target.latest.number}[/dim]")
+        preview(target)
 
     async def session() -> None:
         try:
-            await _repl(project, conversation, Orchestrator(llm), opening=prompt)
+            await _repl(target, conversation, Orchestrator(llm), opening=prompt)
         finally:
             await llm.aclose()
 
@@ -396,7 +406,10 @@ def _do_export(project: Project, fmt: str, output: Path | None = None, size: int
         err_console.print(f"[bold red]error[/bold red] {exc}")
         return
 
-    target = output or Path.cwd() / f"{project.path.name}{suffix}"
+    # Prefer the display name for the filename; the slug is an internal handle and a
+    # timestamped one makes for an unhelpful `logo-20260921-170112.png`.
+    stem = slugify(project.name) if project.name != project.slug else project.slug
+    target = output or Path.cwd() / f"{stem}{suffix}"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_bytes(data)
     console.print(f"[green]exported[/green] {target}  [dim]{len(data):,} bytes[/dim]")
@@ -515,28 +528,129 @@ def show(
 
 
 @app.command("list")
-def list_projects() -> None:
+def list_projects(
+    tag: str | None = typer.Option(None, "--tag", "-t", help="Only show designs with this tag."),
+) -> None:
     """List your designs."""
     projects = Project.list_all()
+    if tag:
+        projects = [p for p in projects if tag in p.tags]
     if not projects:
-        console.print("[dim]no designs yet[/dim]  start with:  isoforge chat")
+        if tag:
+            console.print(f"[dim]no designs tagged '{tag}'[/dim]")
+        else:
+            console.print("[dim]no designs yet[/dim]  start with:  isoforge chat")
         return
 
+    # no_wrap keeps one design per row; the terminal truncates rather than reflowing,
+    # which keeps the list scannable on narrow windows.
     table = Table(box=None, show_header=True, header_style="dim", pad_edge=False)
-    table.add_column("project", style="cyan")
-    table.add_column("versions", justify="right", style="dim")
-    table.add_column("palette")
-    table.add_column("latest change")
+    table.add_column("design", style="cyan", no_wrap=True)
+    table.add_column("name", no_wrap=True, max_width=22)
+    table.add_column("v", justify="right", style="dim")
+    table.add_column("palette", no_wrap=True)
+    table.add_column("tags", style="dim", no_wrap=True, max_width=18)
+    table.add_column("latest change", no_wrap=True, max_width=34)
 
     for project in projects:
         latest = project.latest
+        display = project.name if project.name != project.slug else "[dim]—[/dim]"
         table.add_row(
-            project.path.name,
+            project.slug,
+            display,
             str(len(project.versions())),
             palette_swatches(latest.scene) if latest else Text(),
-            (latest.summary if latest else "")[:44],
+            " ".join(project.tags),
+            latest.summary if latest else "",
         )
     console.print(table)
+    console.print(
+        f"\n[dim]{len(projects)} design{'s' if len(projects) != 1 else ''} · "
+        f"open one with:  isoforge chat --resume -P <design>[/dim]"
+    )
+
+
+@app.command()
+def info(
+    project: str | None = typer.Option(None, "--project", "-P"),
+) -> None:
+    """Show details for one design."""
+    target = resolve_project(project)
+    latest = target.latest
+
+    table = Table(box=None, show_header=False, pad_edge=False)
+    table.add_column("field", style="dim", width=12)
+    table.add_column("value")
+    table.add_row("design", f"[cyan]{target.slug}[/cyan]")
+    table.add_row("name", target.name)
+    if target.description:
+        table.add_row("description", target.description)
+    if target.tags:
+        table.add_row("tags", " ".join(target.tags))
+    table.add_row("versions", str(len(target.versions())))
+    if latest:
+        table.add_row("latest", f"v{latest.number} · {latest.summary}")
+        table.add_row("shapes", str(latest.shape_count))
+        table.add_row("palette", palette_swatches(latest.scene))
+    table.add_row("path", str(target.path))
+    console.print(table)
+
+
+@app.command()
+def edit(
+    project: str | None = typer.Option(None, "--project", "-P"),
+    name: str | None = typer.Option(None, "--name", "-n", help="Set the display name."),
+    description: str | None = typer.Option(None, "--description", "-d"),
+    tags: str | None = typer.Option(None, "--tags", help="Comma-separated, or '' to clear."),
+    rename: str | None = typer.Option(
+        None, "--rename", help="Rename the design handle (moves its directory)."
+    ),
+) -> None:
+    """Edit a design's metadata."""
+    target = resolve_project(project)
+
+    if not any(v is not None for v in (name, description, tags, rename)):
+        fail(
+            "nothing to change",
+            hint="try:  isoforge edit --name 'My Logo' --tags work,client",
+        )
+
+    parsed_tags = None
+    if tags is not None:
+        parsed_tags = [t.strip() for t in tags.split(",") if t.strip()]
+
+    target.update_meta(name=name, description=description, tags=parsed_tags)
+
+    if rename:
+        try:
+            target = target.rename_slug(rename)
+        except FileExistsError as exc:
+            fail(str(exc))
+
+    console.print(f"[green]updated[/green] {target.slug}")
+    info(project=target.slug)
+
+
+@app.command()
+def delete(
+    project: str | None = typer.Option(None, "--project", "-P"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Skip the confirmation prompt."),
+) -> None:
+    """Delete a design and all of its versions."""
+    target = resolve_project(project)
+    count = len(target.versions())
+
+    if not yes:
+        console.print(
+            f"about to delete [cyan]{target.slug}[/cyan] "
+            f"and its {count} version{'s' if count != 1 else ''}"
+        )
+        if not typer.confirm("are you sure?"):
+            console.print("[dim]cancelled[/dim]")
+            return
+
+    target.delete()
+    console.print(f"[green]deleted[/green] {target.slug}")
 
 
 @theme_app.command("list")

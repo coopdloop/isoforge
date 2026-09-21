@@ -34,9 +34,23 @@ def default_data_dir() -> Path:
     return Path(base) / "isoforge"
 
 
-def _slugify(name: str) -> str:
+def slugify(name: str) -> str:
+    """Turn a display name into a filesystem- and URL-safe handle."""
     slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
     return slug[:48] or "logo"
+
+
+#: Internal alias retained for readability at call sites within this module.
+_slugify = slugify
+
+
+def _default_project_name() -> str:
+    """Timestamped name for an unnamed design, so each `chat` is its own project.
+
+    Deliberately local time, not UTC: this string is a label the user reads in
+    `isoforge list`, and it should match the clock on their wall.
+    """
+    return datetime.now().astimezone().strftime("logo-%Y%m%d-%H%M%S")
 
 
 def _now() -> str:
@@ -78,8 +92,44 @@ class Project:
 
     @classmethod
     def open(cls, name: str, root: Path | None = None) -> Project:
+        """Open (or create) the project with this name."""
         root = root or default_data_dir()
         return cls(root / _slugify(name))
+
+    @classmethod
+    def find(cls, name: str, root: Path | None = None) -> Project | None:
+        """Look up an existing project by slug or display name."""
+        root = root or default_data_dir()
+        direct = root / _slugify(name)
+        if direct.is_dir():
+            return cls(direct)
+        lowered = name.strip().lower()
+        return next((p for p in cls.list_all(root) if p.name.lower() == lowered), None)
+
+    @classmethod
+    def create(cls, name: str | None = None, root: Path | None = None) -> Project:
+        """Create a new project, never reusing one that already has work in it.
+
+        Without this, a second `isoforge chat` would silently append versions to the
+        previous design, which is the opposite of starting something new.
+        """
+        root = root or default_data_dir()
+        base = _slugify(name) if name else _default_project_name()
+
+        candidate = root / base
+        counter = 2
+        while candidate.is_dir() and any(VERSION_RE.match(p.name) for p in candidate.iterdir()):
+            candidate = root / f"{base}-{counter}"
+            counter += 1
+
+        project = cls(candidate)
+        # Only record an explicit display name. Storing the slug as the name would
+        # make every design look "named" in listings when it isn't.
+        if name:
+            project.update_meta(name=name)
+        else:
+            project.touch()
+        return project
 
     @classmethod
     def list_all(cls, root: Path | None = None) -> list[Project]:
@@ -99,9 +149,25 @@ class Project:
     # --- metadata ---
 
     @property
+    def slug(self) -> str:
+        """Directory name, and the handle `--project` accepts."""
+        return self.path.name
+
+    @property
     def name(self) -> str:
-        meta = self._meta()
-        return meta.get("name") or self.path.name
+        return self._meta().get("name") or self.path.name
+
+    @property
+    def description(self) -> str:
+        return self._meta().get("description", "")
+
+    @property
+    def tags(self) -> list[str]:
+        return list(self._meta().get("tags") or [])
+
+    @property
+    def created_at(self) -> str:
+        return self._meta().get("created_at", "")
 
     @property
     def updated_at(self) -> float:
@@ -114,11 +180,45 @@ class Project:
         except (OSError, ValueError):
             return {}
 
-    def set_name(self, name: str) -> None:
-        meta = self._meta()
-        meta["name"] = name
+    def _write_meta(self, meta: dict) -> None:
         meta.setdefault("created_at", _now())
+        meta["updated_at"] = _now()
+        self.path.mkdir(parents=True, exist_ok=True)
         (self.path / META_NAME).write_text(json.dumps(meta, indent=2) + "\n")
+
+    def touch(self) -> None:
+        """Write the metadata file so the project exists on disk before any versions."""
+        self._write_meta(self._meta())
+
+    def set_name(self, name: str) -> None:
+        self.update_meta(name=name)
+
+    def update_meta(
+        self,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        tags: list[str] | None = None,
+    ) -> None:
+        """Update editable metadata. Omitted fields are left untouched."""
+        meta = self._meta()
+        if name is not None:
+            meta["name"] = name
+        if description is not None:
+            meta["description"] = description
+        if tags is not None:
+            meta["tags"] = tags
+        self._write_meta(meta)
+
+    def rename_slug(self, new_slug: str) -> Project:
+        """Move the project directory so `--project <slug>` keeps working."""
+        target = self.path.parent / _slugify(new_slug)
+        if target == self.path:
+            return self
+        if target.exists():
+            raise FileExistsError(f"a project directory named '{target.name}' already exists")
+        self.path.rename(target)
+        return Project(target)
 
     # --- versions ---
 

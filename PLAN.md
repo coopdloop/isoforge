@@ -10,8 +10,8 @@ isoforge/
 ├── isodsl/      schema, validation, geometry, color     ~1,400 lines
 ├── agent/       LLM tool-calling, repair loop, prompts  ~1,300
 ├── render/      SVG, PNG, icon bundles                    ~530
-├── cli.py       chat REPL and commands                    ~600
-├── store.py     versions as JSON files                     ~190
+├── cli.py       chat REPL and commands                    ~750
+├── store.py     projects and versions as JSON files        ~260
 └── diff.py      identity-based scene diffing               ~110
 ```
 
@@ -36,6 +36,12 @@ turn saturated brand colors muddy; OKLab keeps them on-hue.
 project directory. History is a directory listing, diff is reading two files, revert is
 copying one forward. More git-friendly than a database, which matters for a tool whose
 premise is designs you can version like source.
+
+**Every `chat` starts a new design.** Continuing is explicit (`--resume` or `-P`).
+The alternative — reusing a shared "untitled" project — silently appended a second
+design's versions onto the first, which is the opposite of what starting a new chat
+means. Unnamed designs get a timestamped handle; a name collision with an existing
+design that has work in it is suffixed rather than merged.
 
 **Revert appends, never truncates.** Reverting to v2 from v5 creates v6. In a tool
 where reverts are cheap and frequent, destroying v3–v5 would be a nasty surprise.
@@ -77,6 +83,7 @@ terminal preview covers the feedback loop, and `isoforge export png` covers the 
 
 ## Possible next steps
 
-- Prompt tuning: the model sometimes overlaps shapes that should be spaced apart
+- Prompt tuning: the model sometimes overlaps shapes that should be spaced apart,
+  and the first version often needs 2-3 corrections before the silhouette reads well
 - `isoforge watch` to re-export on file change, for embedding in a README
-- Publish to PyPI
+- Publish to PyPI (the release workflow is wired, but needs a trusted-publisher setup)
