@@ -91,6 +91,7 @@ func (s *Server) Handler() http.Handler {
 	r.DELETE("/sessions/:session_id", s.handleEndSession)
 	r.POST("/sessions/:session_id/messages", s.handleMessage)
 
+	r.GET("/projects", s.handleListProjects)
 	r.GET("/scenes/:project_id", s.handleGetScene)
 	r.GET("/scenes/:project_id/history", s.handleHistory)
 	r.GET("/scenes/:project_id/versions/:version", s.handleGetVersion)
@@ -99,6 +100,10 @@ func (s *Server) Handler() http.Handler {
 
 	r.POST("/render", s.handleRender)
 	r.POST("/export", s.handleExport)
+	// Export artifacts live on the render service's filesystem. The gateway is the
+	// only endpoint clients know about (ADR-002), so it proxies downloads through.
+	r.GET("/exports/:export_id", s.handleExportMetadata)
+	r.GET("/exports/:export_id/download", s.handleExportDownload)
 
 	r.GET("/themes", s.handleListThemes)
 	r.POST("/themes", s.handleSaveTheme)

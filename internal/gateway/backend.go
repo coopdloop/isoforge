@@ -205,3 +205,30 @@ func (b *Backend) DiffRender(ctx context.Context, before, after json.RawMessage)
 		map[string]any{"before": before, "after": after}, &out)
 	return out, err
 }
+
+// GetExport fetches export metadata from the render service.
+func (b *Backend) GetExport(ctx context.Context, exportID string) (map[string]any, error) {
+	var out map[string]any
+	err := b.do(ctx, "render", http.MethodGet, b.RenderURL+"/exports/"+exportID, nil, &out)
+	return out, err
+}
+
+// StreamExport proxies an artifact download, returning the upstream response so the
+// caller can copy bytes straight through without buffering a whole icon bundle.
+func (b *Backend) StreamExport(ctx context.Context, exportID string) (*http.Response, error) {
+	url := b.RenderURL + "/exports/" + exportID + "/download"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := b.client.Do(req)
+	if err != nil {
+		return nil, &BackendError{Service: "render", Err: err}
+	}
+	if resp.StatusCode >= 400 {
+		data, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, &BackendError{Service: "render", StatusCode: resp.StatusCode, Body: data}
+	}
+	return resp, nil
+}

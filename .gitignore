@@ -13,3 +13,5 @@ exports/
 uv.lock
 /isoforged
 /isoforge-store
+/dist/
+cli/isoforge/bin/

@@ -15,6 +15,17 @@ import (
 	"github.com/coopdloop/isoforge/internal/store"
 )
 
+// handleListProjects powers standalone CLI commands, which need to find the most
+// recent project with actual content when no session is running.
+func (s *Server) handleListProjects(c *gin.Context) {
+	projects, err := s.store.ListProjects(parseIntDefault(c.Query("limit"), 50))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"projects": projects})
+}
+
 func (s *Server) handleGetScene(c *gin.Context) {
 	current, err := s.store.GetCurrentScene(c.Param("project_id"))
 	if errors.Is(err, store.ErrNotFound) {
@@ -376,4 +387,32 @@ func hasFileExtension(path string) bool {
 		base = path[idx+1:]
 	}
 	return strings.Contains(base, ".")
+}
+
+func (s *Server) handleExportMetadata(c *gin.Context) {
+	record, err := s.backend.GetExport(c.Request.Context(), c.Param("export_id"))
+	if err != nil {
+		s.respondBackendError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, record)
+}
+
+func (s *Server) handleExportDownload(c *gin.Context) {
+	resp, err := s.backend.StreamExport(c.Request.Context(), c.Param("export_id"))
+	if err != nil {
+		s.respondBackendError(c, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	for _, header := range []string{"Content-Type", "Content-Length", "Content-Disposition"} {
+		if v := resp.Header.Get(header); v != "" {
+			c.Header(header, v)
+		}
+	}
+	c.Status(resp.StatusCode)
+	if _, err := io.Copy(c.Writer, resp.Body); err != nil {
+		s.log.Warn("export download interrupted", "error", err)
+	}
 }
