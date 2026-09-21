@@ -124,7 +124,7 @@ to shape-array order and JSON key order.
       `/diff/render`, `/exports/{id}[/download]`, `/validate-scene`, `/schema/isodsl`
 - [x] Export store with restart-survivable index and path-traversal defense
 
-### M2 — scene_store (1 day)
+### M2 — scene_store — **DONE**
 - SQLite schema + migrations for all 9 tables (spec uses `UUID`/`TIMESTAMPTZ`/`JSONB`; map to `TEXT`/`TEXT ISO-8601`/`TEXT` + `json_valid()` CHECK, UUIDv4 generated in Go)
 - Canonical scene/theme JSON written to `SCENES_DIR` as files; SQLite holds metadata + history (ADR-003)
 - Immutable append-only `scene_versions`; `projects.current_scene_version_id` is the head pointer
@@ -153,7 +153,7 @@ the follow-up "make it glow more, add a drop shadow" correctly emitted a **1-op 
 rather than a rewrite. Caught and fixed a real renderer bug this way: the glow filter
 was defined but never referenced, so glow silently did nothing.
 
-### M4 — iso_gateway (1 day)
+### M4 — iso_gateway — **DONE**
 - gin server on 4747; reverse-proxy/coordinate the three backends
 - `POST /sessions/{id}/messages` orchestrates: agent turn → validate → store version → broadcast over WS → return to CLI
 - `GET /ws/preview/{session_id}`: gorilla/websocket hub, fan-out `scene.updated` / `export.complete` / `validation.failed`, with heartbeat + reconnect/backoff
@@ -162,7 +162,7 @@ was defined but never referenced, so glow silently did nothing.
 
 **Exit:** two browser tabs + CLI all see the same scene update within ~100ms.
 
-### M5 — CLI (1 day) ← *first fully usable product*
+### M5 — CLI — **DONE** ← *first fully usable product*
 Typer + rich. Subprocess supervisor: pick free ports, start all 3 backends, health-gate, open browser, tear down cleanly on exit/SIGINT.
 
 ```
@@ -239,17 +239,32 @@ Rough total: ~10–12 focused days solo.
 
 ## 7. Current status
 
-**Done:** M0 (schema + validators + fixtures), M1 (render engine + raster + export API),
-M3 (agent orchestrator + 3 providers). 198 tests passing.
+**IsoForge is a working product.** `isoforge chat` → describe a logo → watch it build →
+export PNG/SVG/icon bundle, entirely from the terminal.
 
-**Next, in order:**
-1. **M2 — `scene_store` (Go).** SQLite migrations for the 9 tables, immutable version
-   history, revert-as-new-version, RFC-6902 diffs, theme CRUD, builtin theme seeding.
-   Plus the Go IsoDSL validator mirroring the ISO0xx codes, pinned to the shared fixtures.
-2. **M4 — `iso_gateway` (Go).** Same binary as the store; gin + WS hub, `go:embed` web bundle.
-3. **M5 — CLI.** First fully shippable increment.
-4. **M6 — web workbench**, **M7 — packaging**.
+| Milestone | Status |
+|---|---|
+| M0 schema, validators (Go + Python), fixtures | done |
+| M1 deterministic render engine, raster, exports | done |
+| M2 scene_store: SQLite, versions, diff, revert, themes | done |
+| M3 agent orchestrator, 3 providers, repair loop | done |
+| M4 gateway: REST + WebSocket hub, session orchestration | done |
+| M5 CLI: chat REPL, terminal preview, supervisor | done |
+| M6 web workbench | **next** |
+| M7 packaging | pending |
 
-**Open question for you:** the Go half (M2+M4) is the next big chunk. Worth confirming
-the two-binary split still feels right before I build it, since M5's CLI supervisor
-depends on that shape.
+**295 tests passing** (76 Go, 198 Python services, 21 CLI).
+
+### Verified end-to-end
+Against live OpenRouter + Claude Sonnet 4.5, from a clean data directory:
+- *"three cubes tumbling down like a waterfall, cyan fading to deep blue, floating with
+  gaps"* → valid 3-shape scene, 0 repairs
+- *"make the top cube glow"* → **a 1-op patch** (`add /effects/glow`), not a rewrite
+- history, diff, revert, PNG/SVG/icon-bundle export, live WebSocket preview all working
+
+### What M6 needs
+The web UI is the last large surface. It consumes only the gateway's REST + WS API, which
+is already complete and exercised by tests, so the risk is low. The one thing to get right
+is porting `services/isoforge_py/isodsl/geometry.py` to TypeScript as a direct
+transliteration, pinned to the same fixtures — if the browser preview and the exporter
+disagree, the product's core promise breaks.
