@@ -30,49 +30,53 @@ regenerated image. Nothing else about the design moved.
 
 ## Showcase
 
-Each of these was a single opening prompt to `isoforge chat`, no follow-up edits —
-the kind of cluster, container and cloud iconography that reads well as a project
-mascot or a docs-site header.
+Each of these was a single opening prompt to `isoforge chat`, no follow-up edits.
 
 <table>
 <tr>
-<td><img src="assets/showcase/cluster.png" width="220" alt="Cluster logo"></td>
+<td><img src="assets/showcase/tesseract.png" width="220" alt="Tesseract logo"></td>
 <td>
 
-> a docs logo mascot: a small cluster of three connected server-node cubes
-> arranged in a triangle, thin glowing cyan lines linking their tops, on dark
-> slate background, friendly tech feel
+> a tesseract logo: a cube inside a larger cube, connected at each corner,
+> glowing cyan on dark background
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/cloudstack.png" width="220" alt="Cloudstack logo"></td>
+<td><img src="assets/showcase/rubix.png" width="220" alt="Rubik's cube logo"></td>
 <td>
 
-> a cloud infrastructure logo: a single rounded white cloud cube shape
-> hovering above a small stack of three server rack cubes, soft blue
-> background, minimal and friendly, good for documentation header
+> a rubik's cube logo: a single cube made of a 2x2x2 grid of smaller
+> colorful cubes, classic rubik's cube colors, white background
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/hive.png" width="220" alt="Hive logo"></td>
+<td><img src="assets/showcase/network.png" width="220" alt="Network logo"></td>
 <td>
 
-> a logo representing a cluster of interconnected nodes like a hive: five
-> small cubes arranged around a central larger cube, warm amber and honey
-> colors, on cream background, represents distributed systems
+> four small cubes at the corners of a square, connected by thin lines
+> forming an X across the middle, teal cubes on white background, simple
+> network diagram look
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/containers.png" width="220" alt="Containers logo"></td>
+<td><img src="assets/showcase/nodecloud.png" width="220" alt="Node cloud logo"></td>
 <td>
 
-> a project logo of a small shipping container yard: four separate cube
-> containers arranged in a two-by-two grid with visible gaps between them,
-> alternating teal and orange colors, on white background, clean
-> docs-friendly icon, isometric depth between containers
+> three separate small cubes arranged in a triangle with gaps between them,
+> all sitting on a flat square platform cube, connected by thin bright lines
+> drawn between their top centers, blue cubes white platform
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/stacked.png" width="220" alt="Stacked cubes logo"></td>
+<td>
+
+> a simple stack of three cubes directly on top of each other, each a
+> different shade of teal, white background
 
 </td>
 </tr>
@@ -89,9 +93,9 @@ isoforge export icons             # favicon.ico + .iconset + png/ ladder, zipped
 ```
 
 <p>
-<img src="assets/showcase/sizes/hive-32.png" width="32" height="32" alt="32px">
-<img src="assets/showcase/sizes/hive-64.png" width="64" height="64" alt="64px">
-<img src="assets/showcase/sizes/hive-128.png" width="128" height="128" alt="128px">
+<img src="assets/showcase/sizes/network-32.png" width="32" height="32" alt="32px">
+<img src="assets/showcase/sizes/network-64.png" width="64" height="64" alt="64px">
+<img src="assets/showcase/sizes/network-128.png" width="128" height="128" alt="128px">
 <br><sub>32 · 64 · 128 px, same scene</sub>
 </p>
 
