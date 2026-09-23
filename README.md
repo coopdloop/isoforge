@@ -30,66 +30,70 @@ regenerated image. Nothing else about the design moved.
 
 ## Showcase
 
-Each of these was a single opening prompt to `isoforge chat`, no follow-up edits.
+Each of these was a single opening prompt to `isoforge chat`, no follow-up edits —
+the kind of cluster, container and cloud iconography that reads well as a project
+mascot or a docs-site header.
 
 <table>
 <tr>
-<td><img src="assets/showcase/forge.png" width="220" alt="Forge logo"></td>
+<td><img src="assets/showcase/cluster.png" width="220" alt="Cluster logo"></td>
 <td>
 
-> a blacksmith startup logo: a dark anvil block with a glowing orange ember
-> cube on top, on charcoal background
+> a docs logo mascot: a small cluster of three connected server-node cubes
+> arranged in a triangle, thin glowing cyan lines linking their tops, on dark
+> slate background, friendly tech feel
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/vault.png" width="220" alt="Vault logo"></td>
+<td><img src="assets/showcase/cloudstack.png" width="220" alt="Cloudstack logo"></td>
 <td>
 
-> a security company logo: a solid dark cube with a glowing purple keyhole
-> cutout, floating above a reflective platform
+> a cloud infrastructure logo: a single rounded white cloud cube shape
+> hovering above a small stack of three server rack cubes, soft blue
+> background, minimal and friendly, good for documentation header
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/grove.png" width="220" alt="Grove logo"></td>
+<td><img src="assets/showcase/hive.png" width="220" alt="Hive logo"></td>
 <td>
 
-> an eco startup logo: a small green tree made of stacked cube foliage on a
-> brown trunk cube, warm cream background
+> a logo representing a cluster of interconnected nodes like a hive: five
+> small cubes arranged around a central larger cube, warm amber and honey
+> colors, on cream background, represents distributed systems
 
 </td>
 </tr>
 <tr>
-<td><img src="assets/showcase/pulse.png" width="220" alt="Pulse logo"></td>
+<td><img src="assets/showcase/containers.png" width="220" alt="Containers logo"></td>
 <td>
 
-> a fintech logo: a stack of three thin cyan slabs rising like a bar chart,
-> each one taller than the last, on deep navy
-
-</td>
-</tr>
-<tr>
-<td><img src="assets/showcase/nimbus.png" width="220" alt="Nimbus logo"></td>
-<td>
-
-> a minimalist cloud logo: one large single rounded cube cloud shape in sky
-> blue sitting on a thin white ground plane, simple and clean, pale blue
-> background
-
-</td>
-</tr>
-<tr>
-<td><img src="assets/showcase/rocket.png" width="220" alt="Rocket logo"></td>
-<td>
-
-> a clean isometric rocket ship logo made of stacked cubes: a tall silver
-> nose cone cube, a red body cube below it, and an orange flame cube at the
-> base, on deep navy background, no floating detached parts
+> a project logo of a small shipping container yard: four separate cube
+> containers arranged in a two-by-two grid with visible gaps between them,
+> alternating teal and orange colors, on white background, clean
+> docs-friendly icon, isometric depth between containers
 
 </td>
 </tr>
 </table>
+
+### Icon sizes
+
+`--size` renders any exact pixel dimension, and `export icons` builds the full
+favicon/macOS-iconset/Windows-`.ico` ladder (16 → 1024) from one scene:
+
+```bash
+isoforge export png --size 32     # or 64, 128, 512, any pixel size
+isoforge export icons             # favicon.ico + .iconset + png/ ladder, zipped
+```
+
+<p>
+<img src="assets/showcase/sizes/hive-32.png" width="32" height="32" alt="32px">
+<img src="assets/showcase/sizes/hive-64.png" width="64" height="64" alt="64px">
+<img src="assets/showcase/sizes/hive-128.png" width="128" height="128" alt="128px">
+<br><sub>32 · 64 · 128 px, same scene</sub>
+</p>
 
 ## Install
 
