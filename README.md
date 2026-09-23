@@ -65,9 +65,9 @@ Each of these was a single opening prompt to `isoforge chat`, no follow-up edits
 <td><img src="assets/showcase/nodecloud.png" width="220" alt="Node cloud logo"></td>
 <td>
 
-> three separate small cubes arranged in a triangle with gaps between them,
-> all sitting on a flat square platform cube, connected by thin bright lines
-> drawn between their top centers, blue cubes white platform
+> a small cluster of three cubes on a flat platform, each topped with a
+> small glowing accent cube, arranged with one in front and two behind, on
+> white background, represents distributed nodes
 
 </td>
 </tr>

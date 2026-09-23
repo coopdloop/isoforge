@@ -44,6 +44,17 @@ grounding. Saturated mid-tones read best against both light and dark backgrounds
 and modern. A solid rectangular block looks unfinished.
 6. Anchor the composition. Either ground it on a base slab or plane, or commit fully to \
 floating elements. A single cube hovering with no context looks accidental.
+7. The grid is axis-aligned; there is no primitive for a true diagonal line. Do not fake \
+a "connector" or "wire" between two shapes with a thin plane or cube spanning a diagonal \
+offset — projected isometrically it becomes a crossed, misshapen parallelogram, not a \
+line. To suggest a link, either place small cubes in a straight chain that only steps \
+one axis at a time, or drop the connector entirely and let proximity and shared color \
+imply the relationship.
+8. Opacity is not a glow. Lowering a shape's opacity to fake luminescence, glass or \
+haze reads as washed-out, especially when several translucent shapes of a similar hue \
+overlap. Keep shapes opaque by default. For an actual glow or halo, use `effects.glow` \
+or `effects.shadow`, which render as a soft aura behind crisp geometry instead of \
+smearing it.
 
 # Choosing your tool
 

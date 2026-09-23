@@ -53,20 +53,38 @@ def _available_backend() -> Backend:
         ) from exc
 
 
+def _supersample_factor(width: int, height: int) -> int:
+    """Pick a render-then-downsample multiplier so small isometric edges stay crisp.
+
+    resvg anti-aliases at the target resolution, which is plenty at 512px+ but leaves
+    visibly jagged 30-degree edges on favicon-sized output. Rendering larger and
+    downsampling with Lanczos gives free anti-aliasing without touching the SVG. The
+    factor tapers off as the target grows so large exports stay fast.
+    """
+    smaller = min(width, height)
+    if smaller <= 128:
+        return 4
+    if smaller <= 320:
+        return 2
+    return 1
+
+
 def svg_to_png(svg: str, *, width: int, height: int, backend: Backend | None = None) -> bytes:
     """Rasterize SVG text to PNG bytes at an exact pixel size."""
     backend = backend or _available_backend()
+    factor = _supersample_factor(width, height)
+    render_w, render_h = width * factor, height * factor
 
     if backend == "resvg":
         import resvg_py
 
-        raw = resvg_py.svg_to_bytes(svg_string=svg, width=width, height=height)
+        raw = resvg_py.svg_to_bytes(svg_string=svg, width=render_w, height=render_h)
         data = bytes(raw) if isinstance(raw, (list, bytearray)) else raw
     else:
         import cairosvg
 
         data = cairosvg.svg2png(
-            bytestring=svg.encode("utf-8"), output_width=width, output_height=height
+            bytestring=svg.encode("utf-8"), output_width=render_w, output_height=render_h
         )
 
     # Normalise through Pillow so metadata and encoder settings are ours, not the
