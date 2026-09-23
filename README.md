@@ -28,6 +28,69 @@ $ isoforge chat
 That second turn is the point: the change became a **one-operation patch**, not a
 regenerated image. Nothing else about the design moved.
 
+## Showcase
+
+Each of these was a single opening prompt to `isoforge chat`, no follow-up edits.
+
+<table>
+<tr>
+<td><img src="assets/showcase/forge.png" width="220" alt="Forge logo"></td>
+<td>
+
+> a blacksmith startup logo: a dark anvil block with a glowing orange ember
+> cube on top, on charcoal background
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/vault.png" width="220" alt="Vault logo"></td>
+<td>
+
+> a security company logo: a solid dark cube with a glowing purple keyhole
+> cutout, floating above a reflective platform
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/grove.png" width="220" alt="Grove logo"></td>
+<td>
+
+> an eco startup logo: a small green tree made of stacked cube foliage on a
+> brown trunk cube, warm cream background
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/pulse.png" width="220" alt="Pulse logo"></td>
+<td>
+
+> a fintech logo: a stack of three thin cyan slabs rising like a bar chart,
+> each one taller than the last, on deep navy
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/nimbus.png" width="220" alt="Nimbus logo"></td>
+<td>
+
+> a minimalist cloud logo: one large single rounded cube cloud shape in sky
+> blue sitting on a thin white ground plane, simple and clean, pale blue
+> background
+
+</td>
+</tr>
+<tr>
+<td><img src="assets/showcase/rocket.png" width="220" alt="Rocket logo"></td>
+<td>
+
+> a clean isometric rocket ship logo made of stacked cubes: a tall silver
+> nose cone cube, a red body cube below it, and an orange flame cube at the
+> base, on deep navy background, no floating detached parts
+
+</td>
+</tr>
+</table>
+
 ## Install
 
 ```bash
